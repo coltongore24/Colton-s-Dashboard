@@ -737,7 +737,13 @@ body.is-loading .day-ring-wrap { opacity: 0.35; pointer-events: none; transition
 </head>
 <body>
 
-<h1 class="dash-title">Colton's Dashboard</h1>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+  <h1 class="dash-title" style="margin-bottom:0;">Colton's Dashboard</h1>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <a href="guitar.html" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-tertiary); text-decoration:none; padding:6px 12px; border-radius:8px; background:rgba(255,255,255,0.04); transition:background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='#B8B6B0'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='#76746E'">🎸 Guitar</a>
+    <a href="sync.html" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-tertiary); text-decoration:none; padding:6px 12px; border-radius:8px; background:rgba(255,255,255,0.04); transition:background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='#B8B6B0'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='#76746E'">Sync Settings</a>
+  </div>
+</div>
 
 <!-- ===== GOAL TICKER ===== -->
 <div class="ticker-row">

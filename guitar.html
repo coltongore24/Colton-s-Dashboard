@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guitar Practice — Colton's Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --text-primary:#FAFAFA;--text-secondary:#B8B6B0;--text-tertiary:#76746E;
+  --success:#6BE3A4;--warning:#F2C063;--danger:#FF6B6B;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --amber:#C4965C;--amber-soft:rgba(196,150,92,0.15);--amber-glow:rgba(196,150,92,0.35);
+  --purple:#9B7EC8;--purple-soft:rgba(155,126,200,0.12);
+}
+html{background:#050506;}
+body{
+  background:transparent;color:var(--text-primary);
+  font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  max-width:1100px;margin:0 auto;
+  padding:max(env(safe-area-inset-top,0px),24px) 20px 80px;
+  min-height:100vh;
+}
+html::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 65% 50% at 80% 10%,rgba(196,150,92,0.14),transparent),
+    radial-gradient(ellipse 55% 45% at 15% 85%,rgba(155,126,200,0.10),transparent);
+  filter:blur(40px);animation:washDrift 36s alternate infinite ease-in-out;
+  pointer-events:none;z-index:-2;
+}
+html::after{
+  content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,0.014) 1px,transparent 1px);
+  background-size:3px 3px;pointer-events:none;z-index:-1;
+}
+@keyframes washDrift{from{transform:scale(1) translate(0,0);}to{transform:scale(1.07) translate(-1.5%,2%);}}
+
+/* NAV */
+.nav-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.nav-back{
+  display:inline-flex;align-items:center;gap:6px;font-size:13px;
+  color:var(--text-tertiary);text-decoration:none;padding:6px 12px;
+  border-radius:8px;background:rgba(255,255,255,0.04);transition:background 0.2s,color 0.2s;
+}
+.nav-back:hover{background:rgba(255,255,255,0.08);color:var(--text-secondary);}
+
+/* HERO */
+.guitar-hero{
+  background:rgba(255,255,255,0.04);border-radius:20px;
+  padding:28px 28px 24px;backdrop-filter:blur(24px) saturate(1.2);
+  box-shadow:0 12px 40px rgba(0,0,0,0.45);margin-bottom:20px;
+  background-image:
+    radial-gradient(ellipse 70% 60% at 0% 0%,rgba(196,150,92,0.08),transparent),
+    radial-gradient(ellipse 50% 50% at 100% 100%,rgba(155,126,200,0.07),transparent),
+    rgba(255,255,255,0.04);
+}
+.guitar-hero-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
+.dash-title{
+  font-size:28px;font-weight:700;letter-spacing:-0.025em;
+  background:linear-gradient(135deg,#FFD580 0%,#C4965C 40%,#9B7EC8 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:4px;
+}
+.guitar-hero-sub{font-size:13px;color:var(--text-tertiary);}
+.hero-badges{display:flex;gap:10px;flex-wrap:wrap;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 14px;
+  border-radius:999px;font-size:12px;font-family:var(--font-mono);font-weight:700;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+}
+.hero-badge.streak-active{background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);}
+.hero-badge.plan-badge{background:var(--purple-soft);border-color:rgba(155,126,200,0.3);color:var(--purple);}
+.guitar-start-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,#C4965C,#9B7EC8);
+  color:#fff;border:none;border-radius:12px;padding:12px 24px;
+  font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;
+  box-shadow:0 4px 20px rgba(196,150,92,0.3);
+  transition:transform 0.15s,box-shadow 0.15s,filter 0.15s;
+}
+.guitar-start-btn:hover{transform:translateY(-1px);filter:brightness(1.08);box-shadow:0 6px 28px rgba(196,150,92,0.4);}
+
+/* SECTION TABS */
+.guitar-tabs{
+  display:flex;gap:4px;overflow-x:auto;padding:6px;
+  background:rgba(255,255,255,0.04);border-radius:14px;
+  margin-bottom:20px;position:sticky;top:8px;z-index:20;
+  backdrop-filter:blur(20px);
+  scrollbar-width:none;
+}
+.guitar-tabs::-webkit-scrollbar{display:none;}
+.guitar-tab{
+  flex-shrink:0;padding:8px 14px;border-radius:10px;border:none;
+  background:transparent;color:var(--text-tertiary);font-size:12.5px;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background 0.2s,color 0.2s;white-space:nowrap;
+}
+.guitar-tab.active{background:rgba(255,255,255,0.09);color:var(--text-primary);}
+.guitar-tab:hover:not(.active){background:rgba(255,255,255,0.05);color:var(--text-secondary);}
+
+/* SECTIONS */
+.guitar-section{display:none;}
+.guitar-section.active{display:block;}
+
+/* SECTION TITLE */
+.section-title{
+  font-size:10.5px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--text-tertiary);display:flex;align-items:center;gap:12px;margin-bottom:14px;
+}
+.section-title::before{content:'';width:18px;height:1px;background:var(--text-tertiary);opacity:0.6;flex-shrink:0;}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.08),transparent);}
+
+/* CARD */
+.gm-card{
+  background:rgba(255,255,255,0.04);border-radius:16px;padding:20px 22px;
+  backdrop-filter:blur(24px) saturate(1.2);box-shadow:0 12px 40px rgba(0,0,0,0.45);
+  margin-bottom:16px;position:relative;overflow:hidden;
+}
+
+/* BUTTON STYLES */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:10px 18px;
+  border-radius:10px;font-size:13px;font-weight:600;font-family:inherit;
+  cursor:pointer;border:none;transition:transform 0.15s,filter 0.15s,background 0.2s;
+  white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:none;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-primary{
+  background:linear-gradient(180deg,#fff,#E8E5DD);color:#0A0A0B;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.btn-primary:hover{filter:brightness(1.05);}
+.btn-ghost{background:rgba(255,255,255,0.06);color:var(--text-primary);border:1px solid rgba(255,255,255,0.10);}
+.btn-ghost:hover{background:rgba(255,255,255,0.10);}
+.btn-amber{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-glow);}
+.btn-amber:hover{background:rgba(196,150,92,0.22);}
+.btn-purple{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(155,126,200,0.3);}
+.btn-purple:hover{background:rgba(155,126,200,0.2);}
+
+/* ===== TIMER ===== */
+.timer-display{
+  text-align:center;padding:32px 0 28px;
+}
+.timer-digits{
+  font-size:72px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.04em;
+  font-family:var(--font-mono);line-height:1;
+  background:linear-gradient(180deg,#fff 0%,#B8A890 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  transition:color 0.3s;
+}
+.timer-digits.running{
+  background:linear-gradient(180deg,#FFD580,#C4965C);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.timer-mode-label{
+  font-family:var(--font-mono);font-size:10px;font-weight:800;letter-spacing:0.18em;
+  text-transform:uppercase;color:var(--text-tertiary);margin-top:8px;
+}
+.timer-presets{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;}
+.timer-preset-btn{
+  padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);color:var(--text-secondary);font-size:13px;
+  font-family:inherit;font-weight:600;cursor:pointer;transition:all 0.2s;
+}
+.timer-preset-btn:hover,.timer-preset-btn.active{
+  background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);
+}
+.timer-controls{display:flex;gap:10px;justify-content:center;margin-bottom:24px;}
+.timer-custom-row{
+  display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:24px;
+}
+.timer-custom-input{
+  width:80px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+  border-radius:10px;padding:9px 12px;color:var(--text-primary);
+  font-family:var(--font-mono);font-size:14px;text-align:center;outline:none;
+  transition:border-color 0.2s;
+}
+.timer-custom-input:focus{border-color:rgba(196,150,92,0.5);}
+.timer-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.timer-stat{
+  background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;text-align:center;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.timer-stat-num{font-size:24px;font-weight:700;font-family:var(--font-mono);color:var(--amber);font-variant-numeric:tabular-nums;}
+.timer-stat-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.12em;margin-top:4px;}
+
+/* ===== METRONOME ===== */
+.metro-pulse-wrap{display:flex;justify-content:center;align-items:center;padding:24px 0 20px;}
+.metro-pulse{
+  width:80px;height:80px;border-radius:50%;
+  background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.12);
+  transition:background 0.05s,box-shadow 0.05s,transform 0.05s;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;user-select:none;
+}
+.metro-pulse.beat-accent{
+  background:var(--amber-soft);border-color:var(--amber);
+  box-shadow:0 0 32px var(--amber-glow);transform:scale(1.12);
+}
+.metro-pulse.beat-normal{
+  background:var(--purple-soft);border-color:var(--purple);
+  box-shadow:0 0 20px rgba(155,126,200,0.3);transform:scale(1.05);
+}
+.metro-beat-dots{display:flex;gap:8px;justify-content:center;margin-bottom:24px;}
+.metro-beat-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:rgba(255,255,255,0.08);transition:background 0.05s,box-shadow 0.05s;
+}
+.metro-beat-dot.active{background:var(--amber);box-shadow:0 0 8px var(--amber-glow);}
+.metro-bpm-row{display:flex;align-items:center;gap:16px;justify-content:center;margin-bottom:20px;}
+.metro-bpm-btn{
+  width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:20px;
+  cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;
+}
+.metro-bpm-btn:hover{background:rgba(255,255,255,0.10);}
+.metro-bpm-display{
+  font-size:48px;font-weight:800;font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+  color:var(--text-primary);letter-spacing:-0.04em;min-width:100px;text-align:center;cursor:pointer;
+}
+.metro-bpm-label{font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:0.18em;text-transform:uppercase;text-align:center;}
+.metro-bpm-slider{
+  width:100%;max-width:400px;display:block;margin:0 auto 20px;
+  -webkit-appearance:none;height:4px;border-radius:2px;
+  background:linear-gradient(90deg,var(--amber) var(--pct,30%),rgba(255,255,255,0.10) var(--pct,30%));
+  outline:none;cursor:pointer;
+}
+.metro-bpm-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--amber);box-shadow:0 0 8px var(--amber-glow);cursor:pointer;
+}
+.metro-controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;}
+.metro-sig-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.metro-sig-btn{
+  padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.05);color:var(--text-secondary);font-size:13px;
+  font-family:var(--font-mono);font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.metro-sig-btn.active{background:var(--purple-soft);border-color:rgba(155,126,200,0.3);color:var(--purple);}
+
+/* ===== EXERCISES ===== */
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+.cat-tab{
+  padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);color:var(--text-tertiary);font-size:12px;
+  font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s;
+}
+.cat-tab.active{background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);}
+.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.ex-card{
+  background:rgba(255,255,255,0.04);border-radius:14px;padding:16px 18px;
+  border:1px solid rgba(255,255,255,0.06);cursor:pointer;
+  transition:background 0.2s,border-color 0.2s;
+}
+.ex-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12);}
+.ex-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.ex-title{font-size:14px;font-weight:700;color:var(--text-primary);}
+.ex-card-badges{display:flex;gap:6px;flex-shrink:0;}
+.ex-badge{
+  font-size:18px;cursor:pointer;opacity:0.4;transition:opacity 0.2s,filter 0.2s;
+  background:none;border:none;padding:0;line-height:1;
+}
+.ex-badge.fav-active{opacity:1;filter:drop-shadow(0 0 4px rgba(255,80,80,0.6));}
+.ex-badge.mastered-active{opacity:1;filter:drop-shadow(0 0 4px rgba(107,227,164,0.6));}
+.ex-builds{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;line-height:1.4;}
+.ex-bpm{
+  font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;
+  color:var(--amber);background:var(--amber-soft);padding:2px 8px;border-radius:999px;display:inline-block;
+}
+.ex-tab-wrap{display:none;margin-top:14px;}
+.ex-card.expanded .ex-tab-wrap{display:block;}
+.ex-tab{
+  background:rgba(0,0,0,0.3);border-radius:8px;padding:14px 16px;
+  font-family:var(--font-mono);font-size:12px;line-height:1.7;
+  color:#C8D8A8;overflow-x:auto;white-space:pre;
+}
+
+/* ===== THEORY ===== */
+.theory-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+.theory-nav-btn{
+  padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);color:var(--text-tertiary);font-size:12px;
+  font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s;
+}
+.theory-nav-btn.active{background:var(--purple-soft);border-color:rgba(155,126,200,0.3);color:var(--purple);}
+.theory-content{background:rgba(255,255,255,0.04);border-radius:14px;padding:22px 24px;}
+.theory-h1{font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:14px;}
+.theory-h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--amber);margin:18px 0 8px;}
+.theory-p{font-size:13.5px;line-height:1.75;color:var(--text-secondary);margin-bottom:12px;}
+.theory-list{list-style:none;margin-bottom:12px;}
+.theory-list li{
+  font-size:13px;line-height:1.6;color:var(--text-secondary);padding:4px 0 4px 16px;position:relative;
+}
+.theory-list li::before{content:'›';position:absolute;left:0;color:var(--amber);}
+.theory-mono{
+  font-family:var(--font-mono);font-size:12px;background:rgba(0,0,0,0.3);
+  border-radius:8px;padding:12px 14px;color:#C8D8A8;margin:8px 0;white-space:pre;overflow-x:auto;
+}
+
+/* ===== FEEL ENGINE ===== */
+.feel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.feel-grid{grid-template-columns:1fr;}}
+.feel-prog-card{
+  background:rgba(255,255,255,0.04);border-radius:14px;padding:18px;
+  border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s;
+}
+.feel-prog-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(196,150,92,0.2);}
+.feel-prog-card.playing{border-color:var(--amber);background:var(--amber-soft);}
+.feel-prog-name{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:6px;}
+.feel-prog-roman{font-family:var(--font-mono);font-size:11px;color:var(--amber);margin-bottom:8px;}
+.feel-prog-desc{font-size:12.5px;line-height:1.6;color:var(--text-secondary);margin-bottom:12px;}
+.feel-prog-genres{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.feel-genre-tag{
+  font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px;
+}
+.feel-genre-tag.city{background:rgba(196,150,92,0.15);color:var(--amber);}
+.feel-genre-tag.indie{background:var(--purple-soft);color:var(--purple);}
+.feel-genre-tag.blues{background:rgba(107,227,164,0.10);color:var(--success);}
+.feel-play-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+  border-radius:8px;border:1px solid rgba(196,150,92,0.3);background:var(--amber-soft);
+  color:var(--amber);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;
+  transition:all 0.2s;
+}
+.feel-play-btn:hover{background:rgba(196,150,92,0.22);}
+.feel-play-btn.stop{border-color:rgba(255,107,107,0.3);background:rgba(255,107,107,0.10);color:var(--danger);}
+.feel-chord-section{margin-top:22px;}
+.feel-chord-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.feel-chord-card{
+  background:rgba(255,255,255,0.04);border-radius:12px;padding:14px 16px;
+  border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s;
+}
+.feel-chord-card:hover{background:rgba(255,255,255,0.07);}
+.feel-chord-card.playing{border-color:var(--purple);background:var(--purple-soft);}
+.feel-chord-name{font-size:15px;font-weight:800;color:var(--text-primary);font-family:var(--font-mono);margin-bottom:4px;}
+.feel-chord-quality{font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.feel-chord-desc{font-size:12px;line-height:1.6;color:var(--text-secondary);}
+
+/* ===== TODAY PLAN ===== */
+.today-focus-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+.today-focus-label{font-size:12px;color:var(--text-tertiary);margin-right:4px;}
+.focus-btn{
+  padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.05);color:var(--text-tertiary);font-size:12px;
+  font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s;
+}
+.focus-btn.active{background:var(--amber-soft);border-color:var(--amber-glow);color:var(--amber);}
+.plan-list{list-style:none;margin-bottom:16px;}
+.plan-item{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:8px;
+  background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.06);
+  transition:opacity 0.2s,background 0.2s;
+}
+.plan-item.done{opacity:0.45;background:rgba(107,227,164,0.04);}
+.plan-item-cb{position:relative;width:22px;height:22px;flex-shrink:0;}
+.plan-item-cb input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer;z-index:1;}
+.plan-item-cb-vis{
+  position:absolute;inset:0;border-radius:7px;border:1.5px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.04);transition:all 0.2s;
+}
+.plan-item-cb input:checked + .plan-item-cb-vis{background:var(--success);border-color:var(--success);box-shadow:0 0 12px rgba(107,227,164,0.4);}
+.plan-item-cb input:checked + .plan-item-cb-vis::after{
+  content:'';position:absolute;left:5px;top:2px;width:6px;height:10px;
+  border:2px solid #050506;border-top:none;border-left:none;
+  transform:rotate(45deg);
+}
+.plan-item-info{flex:1;}
+.plan-item-type{font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:2px;}
+.plan-item-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.plan-item-swap{
+  background:none;border:none;color:var(--text-tertiary);cursor:pointer;font-size:16px;
+  opacity:0.4;transition:opacity 0.2s;padding:4px;
+}
+.plan-item:hover .plan-item-swap{opacity:0.8;}
+.today-actions{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ===== TIPS ===== */
+.tip-card{
+  background:rgba(255,255,255,0.04);border-radius:16px;padding:28px 28px 24px;
+  min-height:200px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.tip-num{font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:12px;}
+.tip-text{font-size:16px;line-height:1.8;color:var(--text-primary);flex:1;margin-bottom:20px;}
+.tip-nav{display:flex;gap:10px;align-items:center;}
+.tip-dots{display:flex;gap:5px;}
+.tip-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.12);transition:background 0.2s;}
+.tip-dot.active{background:var(--amber);}
+
+/* ===== AI TUTOR ===== */
+.tutor-chat{
+  background:rgba(0,0,0,0.25);border-radius:12px;height:360px;overflow-y:auto;
+  padding:16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px;
+  scroll-behavior:smooth;
+}
+.tutor-chat:empty::before{
+  content:'Ask me anything about guitar — theory, technique, licks, or how to get a specific sound.';
+  color:var(--text-tertiary);font-size:13px;font-style:italic;
+}
+.chat-msg{max-width:90%;border-radius:12px;padding:12px 15px;font-size:13.5px;line-height:1.7;}
+.chat-msg.user{
+  align-self:flex-end;background:var(--amber-soft);border:1px solid var(--amber-glow);color:var(--text-primary);
+}
+.chat-msg.assistant{
+  align-self:flex-start;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);
+}
+.chat-msg pre{font-family:var(--font-mono);font-size:11.5px;background:rgba(0,0,0,0.3);border-radius:6px;padding:10px;margin:8px 0;overflow-x:auto;white-space:pre;}
+.tutor-input-row{display:flex;gap:10px;}
+.tutor-input{
+  flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+  border-radius:12px;padding:12px 16px;color:var(--text-primary);font-family:inherit;
+  font-size:14px;outline:none;resize:none;transition:border-color 0.2s;
+}
+.tutor-input:focus{border-color:rgba(196,150,92,0.4);}
+.tutor-input::placeholder{color:var(--text-tertiary);}
+.tutor-send{
+  padding:12px 20px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,#C4965C,#9B7EC8);color:#fff;
+  font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;
+  transition:filter 0.2s,transform 0.15s;flex-shrink:0;
+}
+.tutor-send:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.tutor-send:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.tutor-api-note{font-size:11px;color:var(--text-tertiary);margin-top:8px;}
+.tutor-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.tutor-suggestion{
+  padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);color:var(--text-secondary);font-size:11.5px;
+  cursor:pointer;transition:all 0.2s;font-family:inherit;
+}
+.tutor-suggestion:hover{background:rgba(255,255,255,0.08);color:var(--text-primary);}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  .dash-title{font-size:22px;}
+  .timer-digits{font-size:52px;}
+  .metro-bpm-display{font-size:36px;}
+  .timer-stats{grid-template-columns:repeat(3,1fr);}
+  .exercise-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <a href="index.html" class="nav-back">← Dashboard</a>
+</nav>
+
+<!-- HERO -->
+<div class="guitar-hero">
+  <div class="guitar-hero-top">
+    <div>
+      <h1 class="dash-title">Guitar Practice</h1>
+      <div class="guitar-hero-sub">City pop · Indie · Blues — late night practice</div>
+    </div>
+    <div class="hero-badges">
+      <div class="hero-badge" id="heroStreakBadge">🔥 <span id="heroStreakNum">0</span> day streak</div>
+      <div class="hero-badge plan-badge">🎯 <span id="heroPlanNum">0/5</span> today</div>
+    </div>
+  </div>
+  <button class="guitar-start-btn" id="heroStartBtn">▶ Start Session</button>
+</div>
+
+<!-- SECTION TABS -->
+<div class="guitar-tabs">
+  <button class="guitar-tab active" data-sec="timer">⏱ Timer</button>
+  <button class="guitar-tab" data-sec="metro">♩ Metro</button>
+  <button class="guitar-tab" data-sec="exercises">🎸 Exercises</button>
+  <button class="guitar-tab" data-sec="theory">📖 Theory</button>
+  <button class="guitar-tab" data-sec="feel">✨ Feel</button>
+  <button class="guitar-tab" data-sec="today">✓ Today</button>
+  <button class="guitar-tab" data-sec="tips">💡 Tips</button>
+  <button class="guitar-tab" data-sec="tutor">🤖 Tutor</button>
+</div>
+
+<!-- ===== TIMER ===== -->
+<div class="guitar-section active" id="sec-timer">
+  <div class="section-title">Practice Timer</div>
+  <div class="gm-card">
+    <div class="timer-display">
+      <div class="timer-digits" id="timerDigits">00:00</div>
+      <div class="timer-mode-label" id="timerModeLabel">Count Up</div>
+    </div>
+    <div class="timer-presets">
+      <button class="timer-preset-btn" data-min="15">15 min</button>
+      <button class="timer-preset-btn" data-min="30">30 min</button>
+      <button class="timer-preset-btn" data-min="45">45 min</button>
+      <button class="timer-preset-btn" data-min="60">60 min</button>
+      <button class="timer-preset-btn active" data-min="0">Free</button>
+    </div>
+    <div class="timer-custom-row">
+      <input class="timer-custom-input" id="timerCustomInput" type="number" min="1" max="240" placeholder="min" title="Custom duration in minutes"/>
+      <button class="btn btn-ghost" id="timerCustomSet">Set</button>
+    </div>
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="timerStartBtn">▶ Start</button>
+      <button class="btn btn-ghost" id="timerResetBtn">↺ Reset</button>
+    </div>
+    <div class="timer-stats">
+      <div class="timer-stat">
+        <div class="timer-stat-num" id="statToday">0</div>
+        <div class="timer-stat-label">min today</div>
+      </div>
+      <div class="timer-stat">
+        <div class="timer-stat-num" id="statWeek">0</div>
+        <div class="timer-stat-label">min this week</div>
+      </div>
+      <div class="timer-stat">
+        <div class="timer-stat-num" id="statStreak">0</div>
+        <div class="timer-stat-label">day streak</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== METRONOME ===== -->
+<div class="guitar-section" id="sec-metro">
+  <div class="section-title">Metronome</div>
+  <div class="gm-card">
+    <div class="metro-pulse-wrap">
+      <div class="metro-pulse" id="metroPulse">♩</div>
+    </div>
+    <div class="metro-beat-dots" id="metroBeatDots"></div>
+    <div class="metro-bpm-row">
+      <button class="metro-bpm-btn" id="metroBpmDown">−</button>
+      <div>
+        <div class="metro-bpm-display" id="metroBpmDisplay">120</div>
+        <div class="metro-bpm-label">BPM</div>
+      </div>
+      <button class="metro-bpm-btn" id="metroBpmUp">+</button>
+    </div>
+    <input class="metro-bpm-slider" id="metroBpmSlider" type="range" min="40" max="240" value="120"/>
+    <div class="metro-controls">
+      <button class="btn btn-primary" id="metroStartBtn">▶ Start</button>
+      <button class="btn btn-ghost" id="metroTapBtn">Tap Tempo</button>
+    </div>
+    <div class="metro-sig-row">
+      <button class="metro-sig-btn active" data-sig="4/4">4/4</button>
+      <button class="metro-sig-btn" data-sig="3/4">3/4</button>
+      <button class="metro-sig-btn" data-sig="6/8">6/8</button>
+      <button class="metro-sig-btn" data-sig="12/8">12/8</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXERCISES ===== -->
+<div class="guitar-section" id="sec-exercises">
+  <div class="section-title">Exercise Tab Library</div>
+  <div class="cat-tabs" id="catTabs">
+    <button class="cat-tab active" data-cat="all">All</button>
+    <button class="cat-tab" data-cat="warmups">Warmups</button>
+    <button class="cat-tab" data-cat="technique">Technique</button>
+    <button class="cat-tab" data-cat="citypop">City Pop</button>
+    <button class="cat-tab" data-cat="indie">Indie</button>
+    <button class="cat-tab" data-cat="blues">Blues</button>
+  </div>
+  <div class="exercise-grid" id="exerciseGrid"></div>
+</div>
+
+<!-- ===== THEORY ===== -->
+<div class="guitar-section" id="sec-theory">
+  <div class="section-title">Theory Notes</div>
+  <div class="theory-nav" id="theoryNav"></div>
+  <div class="theory-content" id="theoryContent"></div>
+</div>
+
+<!-- ===== FEEL ENGINE ===== -->
+<div class="guitar-section" id="sec-feel">
+  <div class="section-title">The Feel Engine</div>
+  <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:18px;">Connect progressions and chord shapes to emotions. Click any card to play it.</p>
+  <div class="section-title" style="margin-top:4px;">Progressions</div>
+  <div class="feel-grid" id="feelProgGrid"></div>
+  <div class="feel-chord-section">
+    <div class="section-title">Chord Colors</div>
+    <div class="feel-chord-grid" id="feelChordGrid"></div>
+  </div>
+</div>
+
+<!-- ===== TODAY PLAN ===== -->
+<div class="guitar-section" id="sec-today">
+  <div class="section-title">Today's Practice Plan</div>
+  <div class="gm-card">
+    <div class="today-focus-row">
+      <span class="today-focus-label">Focus:</span>
+      <button class="focus-btn active" data-focus="">Balanced</button>
+      <button class="focus-btn" data-focus="citypop">City Pop</button>
+      <button class="focus-btn" data-focus="indie">Indie</button>
+      <button class="focus-btn" data-focus="blues">Blues</button>
+    </div>
+    <ul class="plan-list" id="planList"></ul>
+    <div class="today-actions">
+      <button class="btn btn-primary" id="planRegenBtn">↺ New Plan</button>
+      <button class="btn btn-ghost" id="planCompleteBtn">✓ Mark All Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TIPS ===== -->
+<div class="guitar-section" id="sec-tips">
+  <div class="section-title">Technique Tips</div>
+  <div class="gm-card tip-card">
+    <div class="tip-num" id="tipNum">Tip 1 of 15</div>
+    <div class="tip-text" id="tipText"></div>
+    <div class="tip-nav">
+      <button class="btn btn-ghost" id="tipPrevBtn">← Prev</button>
+      <div class="tip-dots" id="tipDots"></div>
+      <button class="btn btn-amber" id="tipNextBtn">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AI TUTOR ===== -->
+<div class="guitar-section" id="sec-tutor">
+  <div class="section-title">AI Guitar Tutor</div>
+  <div class="gm-card">
+    <div class="tutor-suggestions" id="tutorSuggestions"></div>
+    <div class="tutor-chat" id="tutorChat"></div>
+    <div class="tutor-input-row">
+      <textarea class="tutor-input" id="tutorInput" rows="2" placeholder="Ask about theory, technique, licks, or how to get a sound…"></textarea>
+      <button class="tutor-send" id="tutorSendBtn">Send</button>
+    </div>
+    <div class="tutor-api-note" id="tutorApiNote"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ===== CONFIG ===== */
+const ANTHROPIC_API_KEY = '';
+const SUPABASE_URL = 'https://ofpkcoiudxjlkmzzwobf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_lt2YTbCy58VugZIYowMcAw_Ji1403d4';
+
+/* ===== SUPABASE ===== */
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let mem = {};
+let pendingDeletes = new Set();
+
+async function initCache() {
+  try {
+    const { data, error } = await db.from('dashboard_kv').select('key,value');
+    if (!error && data && data.length > 0) {
+      data.forEach(r => { mem[r.key] = r.value; });
+      return;
+    }
+  } catch(e) {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k) try { mem[k] = JSON.parse(localStorage.getItem(k)); } catch {}
+  }
+}
+
+let _pushTimer = null;
+function schedulePush() { clearTimeout(_pushTimer); _pushTimer = setTimeout(_pushNow, 400); }
+async function _pushNow() {
+  try {
+    const rows = Object.entries(mem).map(([key,value]) => ({key,value}));
+    if (rows.length) await db.from('dashboard_kv').upsert(rows, {onConflict:'key'});
+    if (pendingDeletes.size) {
+      await db.from('dashboard_kv').delete().in('key',[...pendingDeletes]);
+      pendingDeletes.clear();
+    }
+  } catch {}
+}
+
+function storeGet(k) { return mem[k] ?? null; }
+function storeSet(k, v) { mem[k] = v; localStorage.setItem(k, JSON.stringify(v)); schedulePush(); }
+
+/* ===== DATE HELPERS ===== */
+function todayStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function weekKeys() {
+  const days = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  return days;
+}
+
+/* ===== SECTION NAV ===== */
+document.querySelectorAll('.guitar-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const sec = btn.dataset.sec;
+    document.querySelectorAll('.guitar-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.guitar-section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sec-' + sec).classList.add('active');
+  });
+});
+
+/* ===== TIMER ===== */
+let timerInterval = null;
+let timerRunning = false;
+let timerSeconds = 0;
+let timerTarget = 0;   // 0 = count-up
+let timerSessionStart = null;
+
+function fmtTime(s) {
+  const m = Math.floor(Math.abs(s) / 60);
+  const sec = Math.abs(s) % 60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function renderTimer() {
+  const el = document.getElementById('timerDigits');
+  const lbl = document.getElementById('timerModeLabel');
+  if (timerTarget > 0) {
+    const remaining = timerTarget - timerSeconds;
+    el.textContent = fmtTime(Math.max(0, remaining));
+    lbl.textContent = `${timerTarget / 60} min session`;
+  } else {
+    el.textContent = fmtTime(timerSeconds);
+    lbl.textContent = 'Count Up';
+  }
+  el.classList.toggle('running', timerRunning);
+}
+
+function updateTimerStats() {
+  const today = todayStr();
+  const mins = storeGet('guitar:daily:' + today) || 0;
+  document.getElementById('statToday').textContent = Math.round(mins);
+  let weekTotal = 0;
+  weekKeys().forEach(d => { weekTotal += storeGet('guitar:daily:' + d) || 0; });
+  document.getElementById('statWeek').textContent = Math.round(weekTotal);
+  const streak = storeGet('guitar:streak') || { count: 0 };
+  document.getElementById('statStreak').textContent = streak.count;
+  document.getElementById('heroStreakNum').textContent = streak.count;
+  if (streak.count > 0) document.getElementById('heroStreakBadge').classList.add('streak-active');
+}
+
+function recordPracticeMinutes(mins) {
+  if (mins < 0.5) return;
+  const today = todayStr();
+  const prev = storeGet('guitar:daily:' + today) || 0;
+  storeSet('guitar:daily:' + today, prev + mins);
+  // Update streak
+  let streak = storeGet('guitar:streak') || { count: 0, lastDate: null };
+  const yesterday = (() => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })();
+  if (streak.lastDate === today) { /* already counted */ }
+  else if (streak.lastDate === yesterday || !streak.lastDate) {
+    streak.count++;
+    streak.lastDate = today;
+  } else {
+    streak.count = 1;
+    streak.lastDate = today;
+  }
+  storeSet('guitar:streak', streak);
+  updateTimerStats();
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  timerSessionStart = Date.now();
+  document.getElementById('timerStartBtn').textContent = '⏸ Pause';
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    renderTimer();
+    if (timerTarget > 0 && timerSeconds >= timerTarget) {
+      pauseTimer();
+      playChime();
+      recordPracticeMinutes(timerTarget / 60);
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  if (!timerRunning) return;
+  timerRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById('timerStartBtn').textContent = '▶ Resume';
+  if (timerSessionStart) {
+    const mins = (Date.now() - timerSessionStart) / 60000;
+    recordPracticeMinutes(mins);
+    timerSessionStart = null;
+  }
+}
+
+function resetTimer() {
+  if (timerRunning) pauseTimer();
+  timerSeconds = 0;
+  document.getElementById('timerStartBtn').textContent = '▶ Start';
+  renderTimer();
+}
+
+document.getElementById('timerStartBtn').addEventListener('click', () => {
+  timerRunning ? pauseTimer() : startTimer();
+});
+document.getElementById('timerResetBtn').addEventListener('click', resetTimer);
+
+document.querySelectorAll('.timer-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (timerRunning) pauseTimer();
+    timerSeconds = 0;
+    timerTarget = parseInt(btn.dataset.min) * 60;
+    document.querySelectorAll('.timer-preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('timerStartBtn').textContent = '▶ Start';
+    renderTimer();
+  });
+});
+
+document.getElementById('timerCustomSet').addEventListener('click', () => {
+  const v = parseInt(document.getElementById('timerCustomInput').value);
+  if (v > 0) {
+    timerTarget = v * 60;
+    timerSeconds = 0;
+    document.querySelectorAll('.timer-preset-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('timerStartBtn').textContent = '▶ Start';
+    renderTimer();
+  }
+});
+
+document.getElementById('heroStartBtn').addEventListener('click', () => {
+  document.querySelectorAll('.guitar-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.guitar-section').forEach(s => s.classList.remove('active'));
+  document.querySelector('[data-sec="timer"]').classList.add('active');
+  document.getElementById('sec-timer').classList.add('active');
+  if (!timerRunning) startTimer();
+});
+
+/* ===== CHIME ===== */
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const t = ctx.currentTime + i * 0.25;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      osc.start(t); osc.stop(t + 1.2);
+    });
+  } catch {}
+}
+
+/* ===== METRONOME ===== */
+let metroCtx = null;
+let metroRunning = false;
+let metroBpm = 120;
+let metroSig = { beats: 4, div: 4 };
+let metroBeat = 0;
+let metroNextNoteTime = 0;
+let metroSchedulerTimer = null;
+let metroBeatQueue = [];
+let metroRafId = null;
+const LOOK_AHEAD = 0.12;
+const SCHEDULE_INTERVAL = 25;
+let tapTimes = [];
+
+function metroBeatsPerBar() { return metroSig.beats; }
+
+function metroScheduleNote(beat, time) {
+  const ctx = metroCtx;
+  const isAccent = beat === 0;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.frequency.value = isAccent ? 1047 : 784;
+  osc.type = 'square';
+  gain.gain.setValueAtTime(isAccent ? 0.5 : 0.3, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+  osc.start(time); osc.stop(time + 0.05);
+  metroBeatQueue.push({ beat, time });
+}
+
+function metroAdvance() {
+  const secPerBeat = 60.0 / metroBpm;
+  const secPerDiv = metroSig.div === 8 ? secPerBeat / 2 : secPerBeat;
+  metroNextNoteTime += secPerDiv;
+  metroBeat = (metroBeat + 1) % metroBeatsPerBar();
+}
+
+function metroScheduler() {
+  while (metroNextNoteTime < metroCtx.currentTime + LOOK_AHEAD) {
+    metroScheduleNote(metroBeat, metroNextNoteTime);
+    metroAdvance();
+  }
+  metroSchedulerTimer = setTimeout(metroScheduler, SCHEDULE_INTERVAL);
+}
+
+function metroDrawer() {
+  const now = metroCtx ? metroCtx.currentTime : 0;
+  while (metroBeatQueue.length && metroBeatQueue[0].time < now) {
+    const { beat } = metroBeatQueue.shift();
+    flashMetro(beat);
+  }
+  metroRafId = requestAnimationFrame(metroDrawer);
+}
+
+function flashMetro(beat) {
+  const pulse = document.getElementById('metroPulse');
+  const dots = document.querySelectorAll('.metro-beat-dot');
+  pulse.classList.remove('beat-accent','beat-normal');
+  pulse.classList.add(beat === 0 ? 'beat-accent' : 'beat-normal');
+  setTimeout(() => pulse.classList.remove('beat-accent','beat-normal'), 80);
+  dots.forEach((d,i) => d.classList.toggle('active', i === beat));
+}
+
+function startMetro() {
+  if (metroRunning) return;
+  metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+  metroRunning = true;
+  metroBeat = 0;
+  metroBeatQueue = [];
+  metroNextNoteTime = metroCtx.currentTime + 0.05;
+  metroScheduler();
+  metroDrawer();
+  document.getElementById('metroStartBtn').textContent = '⏹ Stop';
+}
+
+function stopMetro() {
+  if (!metroRunning) return;
+  metroRunning = false;
+  clearTimeout(metroSchedulerTimer);
+  cancelAnimationFrame(metroRafId);
+  metroBeatQueue = [];
+  document.querySelectorAll('.metro-beat-dot').forEach(d => d.classList.remove('active'));
+  document.getElementById('metroStartBtn').textContent = '▶ Start';
+  if (metroCtx) { metroCtx.close(); metroCtx = null; }
+}
+
+function buildBeatDots() {
+  const container = document.getElementById('metroBeatDots');
+  container.innerHTML = '';
+  for (let i = 0; i < metroBeatsPerBar(); i++) {
+    const d = document.createElement('div');
+    d.className = 'metro-beat-dot';
+    container.appendChild(d);
+  }
+}
+
+function updateBpmSlider() {
+  const slider = document.getElementById('metroBpmSlider');
+  const pct = ((metroBpm - 40) / 200) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+  slider.value = metroBpm;
+  document.getElementById('metroBpmDisplay').textContent = metroBpm;
+}
+
+document.getElementById('metroStartBtn').addEventListener('click', () => metroRunning ? stopMetro() : startMetro());
+
+document.getElementById('metroBpmUp').addEventListener('click', () => { metroBpm = Math.min(240, metroBpm + 1); updateBpmSlider(); });
+document.getElementById('metroBpmDown').addEventListener('click', () => { metroBpm = Math.max(40, metroBpm - 1); updateBpmSlider(); });
+
+document.getElementById('metroBpmSlider').addEventListener('input', e => {
+  metroBpm = parseInt(e.target.value);
+  updateBpmSlider();
+});
+
+document.getElementById('metroTapBtn').addEventListener('click', () => {
+  const now = Date.now();
+  tapTimes = tapTimes.filter(t => now - t < 3000);
+  tapTimes.push(now);
+  if (tapTimes.length >= 2) {
+    const intervals = [];
+    for (let i = 1; i < tapTimes.length; i++) intervals.push(tapTimes[i] - tapTimes[i-1]);
+    const avg = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+    metroBpm = Math.round(Math.min(240, Math.max(40, 60000 / avg)));
+    updateBpmSlider();
+  }
+});
+
+document.querySelectorAll('.metro-sig-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.metro-sig-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const [beats, div] = btn.dataset.sig.split('/').map(Number);
+    metroSig = { beats, div };
+    if (metroRunning) { stopMetro(); startMetro(); }
+    buildBeatDots();
+  });
+});
+
+/* ===== EXERCISE DATA ===== */
+const EXERCISES = [
+  {
+    id:'w1',cat:'warmups',title:'Chromatic Spider Walk',bpm:'60–80',
+    builds:'Finger independence and even pressure across all four fretting fingers.',
+    tab:`E|--5-6-7-8--6-7-8-9--7-8-9-10--|
+A|--5-6-7-8--6-7-8-9--7-8-9-10--|
+D|--5-6-7-8--6-7-8-9--7-8-9-10--|
+G|--5-6-7-8--6-7-8-9--7-8-9-10--|
+B|--5-6-7-8--6-7-8-9--7-8-9-10--|
+e|--5-6-7-8--6-7-8-9--7-8-9-10--|
+   One finger per fret. Reverse descending.`
+  },
+  {
+    id:'w2',cat:'warmups',title:'1-3-2-4 Finger Independence',bpm:'50–70',
+    builds:'Breaking the "finger pairing" habit — each finger acts independently.',
+    tab:`E|--1-3-2-4--2-4-3-5--3-5-4-6--|
+A|--1-3-2-4--2-4-3-5--3-5-4-6--|
+D|--1-3-2-4--2-4-3-5--3-5-4-6--|
+G|--1-3-2-4--2-4-3-5--3-5-4-6--|
+B|--1-3-2-4--2-4-3-5--3-5-4-6--|
+e|--1-3-2-4--2-4-3-5--3-5-4-6--|
+   Index=1 Middle=2 Ring=3 Pinky=4`
+  },
+  {
+    id:'w3',cat:'warmups',title:'Whole-Neck Stretch',bpm:'40–60',
+    builds:'Expanding reach and relaxing tension across the full fretboard.',
+    tab:`E|--1----5----8----12----|
+A|--1----5----8----12----|
+D|--1----5----8----12----|
+G|--1----5----8----12----|
+B|--1----5----8----12----|
+e|--1----5----8----12----|
+   Slow and deliberate. Feel the stretch.`
+  },
+  {
+    id:'t1',cat:'technique',title:'Alternate Picking — Minor Pentatonic',bpm:'80–140',
+    builds:'Pick-hand discipline — strict down-up on every note, no economy.',
+    tab:`e|--0-3--0-3--0-3--|
+B|--0-3--0-3--0-3--|
+G|--0-2--0-2--0-2--|
+D|--0-2--0-2--0-2--|
+A|--0-2--0-2--0-2--|
+E|--0-3--0-3--0-3--|
+   A minor pentatonic. ↓↑ on every note.`
+  },
+  {
+    id:'t2',cat:'technique',title:'Legato Hammer-on / Pull-off',bpm:'70–120',
+    builds:'Fretting-hand strength and evenness without the pick.',
+    tab:`e|--5h7p5--5h7p5--5h7p5--|
+B|--5h7p5--5h7p5--5h7p5--|
+G|--4h6p4--4h6p4--4h6p4--|
+D|--------------------------------|
+A|--------------------------------|
+E|--------------------------------|
+   Keep pick-hand still. Let fretting hand do all the work.`
+  },
+  {
+    id:'t3',cat:'technique',title:'String Skipping — Wide Intervals',bpm:'60–100',
+    builds:'Accuracy over wide intervals; forces clean fretting-hand muting.',
+    tab:`e|--5---------8---------5--------|
+B|-----8-----------8------------|
+G|--------7-----------7---------|
+D|--5---------5--------------5--|
+A|-------------------------------|
+E|-------------------------------|
+   Skip a string on every note. Go slow.`
+  },
+  {
+    id:'t4',cat:'technique',title:'Bending Accuracy + Vibrato',bpm:'60–80',
+    builds:'Pitching bends dead-on; developing a wide vocal vibrato (Mayer style).',
+    tab:`e|--9b11~~~--9b11---(11)--|
+B|--10b12~~~--10b12--(12)--|
+G|--9b11~~~--9b11---(11)--|
+D|---------------------------------|
+A|---------------------------------|
+E|---------------------------------|
+   Bend to pitch, hold, add vibrato. Compare against a reference note.`
+  },
+  {
+    id:'t5',cat:'technique',title:'Hybrid Picking — Country/Takanaka',bpm:'80–130',
+    builds:'Pick + middle/ring finger coordination for clean rhythmic attack.',
+    tab:`e|------7----------7---------|
+B|----8----8------8----8-----|
+G|--7----------7-------------|
+D|-----------------------------|
+A|-----------------------------|
+E|-----------------------------|
+   Pick bass note (p), pluck trebles with m+a fingers simultaneously.`
+  },
+  {
+    id:'c1',cat:'citypop',title:'Fmaj7 Arpeggio — Takanaka Shape',bpm:'70–110',
+    builds:'Clean maj7 voicing — the defining sound of city pop harmony.',
+    tab:`e|--------8h10-8----------|
+B|------10-------10-8-----|
+G|----9---------------9---|
+D|--7---------------------|
+A|------------------------|
+E|------------------------|
+   Fmaj7 arpeggio. Keep it smooth and bright. Slight pick attack, no dirt.`
+  },
+  {
+    id:'c2',cat:'citypop',title:'Royal Road Chord Melody Fragment',bpm:'60–90',
+    builds:'Navigating IVmaj7–V7–iiim7–vim — the heart of city pop harmony.',
+    tab:`  Fmaj7        G7          Em7         Am7
+e|--8---------|--3---------|--7---------|--5---------|
+B|--10--------|--6---------|--8---------|--5---------|
+G|--9---------|--4---------|--7---------|--5---------|
+D|--10--------|--5---------|--9---------|--7---------|
+   Strum gently, let chords ring. This progression is bittersweet gold.`
+  },
+  {
+    id:'c3',cat:'citypop',title:'Sliding Double-Stops',bpm:'80–120',
+    builds:'Smooth voice-leading between thirds — city pop melodic sweetness.',
+    tab:`e|--9/11--9/11--7/9--7/9--|
+B|--10/12-10/12--8/10-8/10-|
+G|--------------------------------|
+D|--------------------------------|
+A|--------------------------------|
+E|--------------------------------|
+   Slide on both strings together. Stay light and clean.`
+  },
+  {
+    id:'c4',cat:'citypop',title:'Lydian Flavor Lick (Takanaka)',bpm:'90–130',
+    builds:'The #4 (raised 4th) that gives city pop its bright, floating shimmer.',
+    tab:`e|--9-10-12-13-12-10-9--|
+B|--10-12-13--------------|
+G|-------------------------|
+D|-------------------------|
+A|-------------------------|
+E|-------------------------|
+   D Lydian: the 13 is the #4. That note = city pop sunshine.`
+  },
+  {
+    id:'i1',cat:'indie',title:'Open Chord Strumming — D-A-G',bpm:'90–120',
+    builds:'Rhythmic feel, consistent attack, and natural dynamics in open position.',
+    tab:`  D          A          G
+e|--2---------|--0---------|--3---------|
+B|--3---------|--2---------|--3---------|
+G|--2---------|--2---------|--0---------|
+D|--0---------|--2---------|--0---------|
+A|------------|--0---------|--2---------|
+E|------------|------------|--3---------|
+   Pattern: ↓ ↓↑ ↑↓↑. Let chords breathe. Capo 2 for jangle.`
+  },
+  {
+    id:'i2',cat:'indie',title:'Arpeggiated Jangle Pattern',bpm:'70–100',
+    builds:'Fingerpicked arpeggiation — open, ringing, indie shimmer.',
+    tab:`  Cadd9               G
+e|--0-----------0------|--3-----------3------|
+B|--3-----3-----3------|--3-----3-----3------|
+G|--0---0---0---0------|--0---0---0---0------|
+D|--2-2---------2------|--0-0---------0------|
+A|--3-----------|-------|--2-----------|-------|
+E|--------------|-------|--3-----------|-------|
+   Thumb bass, fingers pluck treble. Let every note ring.`
+  },
+  {
+    id:'i3',cat:'indie',title:'Palm-Muted Rhythm — Runarounds Style',bpm:'100–140',
+    builds:'Tight, punchy rhythm with controlled muting — indie rock backbone.',
+    tab:`E|--0-0-0-0--0-0-0-0--|  (palm mute = PM)
+A|--0-0-0-0--0-0-0-0--|
+D|--2-2-2-2--2-2-2-2--|
+G|--2-2-2-2--2-2-2-2--|
+B|--0-0-0-0--0-0-0-0--|
+e|--0-0-0-0--0-0-0-0--|
+   PM on low strings. Release mute on beats 3-4 for dynamics.`
+  },
+  {
+    id:'b1',cat:'blues',title:'12-Bar Blues in A — Shuffle Feel',bpm:'70–100',
+    builds:'The foundation. Dominant 7th chord changes with shuffle rhythm.',
+    tab:`  A7 (shuffle)             D7
+E|--0-0-2-2-0-0-2-2----|--0-0-2-2-0-0-2-2--|
+A|--0-0-2-2-0-0-2-2----|--5-5-7-7-5-5-7-7--|
+D|--------------------------4-4-6-6-4-4-6-6--|
+   A7→D7→A7→E7→D7→A7→E7. Triplet shuffle: long-short.`
+  },
+  {
+    id:'b2',cat:'blues',title:'A Minor Pentatonic — Box 1',bpm:'60–120',
+    builds:'The essential position for blues soloing and improvisaiton in A.',
+    tab:`e|--5---8--|
+B|--5---8--|
+G|--5---7--|
+D|--5---7--|
+A|--5---7--|
+E|--5---8--|
+   Learn every note. Bend the 7th fret on G string up a whole step.`
+  },
+  {
+    id:'b3',cat:'blues',title:'Mayer-Style Turnaround (in A)',bpm:'60–80',
+    builds:'Chromatic descent from I back to I — every slow blues needs this.',
+    tab:`e|--8--7--6--5-----|
+B|--8--7--6--5-----|
+G|--5--------------|
+D|--5--------------|
+A|--5--------------|
+E|-----------------|
+   Slow and emotional. Bend the last note. This is the money phrase.`
+  },
+  {
+    id:'b4',cat:'blues',title:'Expressive Bending Lick (Mayer)',bpm:'50–80',
+    builds:'Vocal phrasing through the guitar — bends that tell a story.',
+    tab:`e|--8b10~~~--(10)b12--(12)p10-8--|
+B|-----------------------------------10--|
+G|--------------------------------------|
+D|--------------------------------------|
+A|--------------------------------------|
+E|--------------------------------------|
+   Bend slowly into each note. The speed of the bend IS the feeling.`
+  },
+  {
+    id:'b5',cat:'blues',title:'Slow Blues — Volume Swell Phrasing',bpm:'40–60',
+    builds:'Touch, dynamics, and space — playing less, meaning more.',
+    tab:`e|---12b14~~~---12b14---12-10-8---10b12~~~--|
+B|------------------------------------------12--|
+G|----------------------------------------------|
+D|----------------------------------------------|
+A|----------------------------------------------|
+E|----------------------------------------------|
+   Roll your volume knob after picking. Swell into each note. Silence matters.`
+  }
+];
+
+/* ===== EXERCISE RENDER ===== */
+let favorites = [];
+let mastered = [];
+
+function loadExerciseLists() {
+  favorites = storeGet('guitar:favorites') || [];
+  mastered = storeGet('guitar:mastered') || [];
+}
+
+function renderExercises(cat) {
+  const grid = document.getElementById('exerciseGrid');
+  grid.innerHTML = '';
+  const list = cat === 'all' ? EXERCISES : EXERCISES.filter(e => e.cat === cat);
+  list.forEach(ex => {
+    const card = document.createElement('div');
+    card.className = 'ex-card';
+    card.innerHTML = `
+      <div class="ex-card-header">
+        <div class="ex-title">${ex.title}</div>
+        <div class="ex-card-badges">
+          <button class="ex-badge ${favorites.includes(ex.id) ? 'fav-active' : ''}" data-fav="${ex.id}" title="Favorite">♥</button>
+          <button class="ex-badge ${mastered.includes(ex.id) ? 'mastered-active' : ''}" data-mas="${ex.id}" title="Mastered">✓</button>
+        </div>
+      </div>
+      <div class="ex-builds">${ex.builds}</div>
+      <span class="ex-bpm">${ex.bpm} BPM</span>
+      <div class="ex-tab-wrap"><pre class="ex-tab">${ex.tab}</pre></div>
+    `;
+    card.addEventListener('click', e => {
+      if (e.target.closest('[data-fav]') || e.target.closest('[data-mas]')) return;
+      card.classList.toggle('expanded');
+    });
+    card.querySelector('[data-fav]').addEventListener('click', e => {
+      e.stopPropagation();
+      favorites = favorites.includes(ex.id) ? favorites.filter(f => f !== ex.id) : [...favorites, ex.id];
+      storeSet('guitar:favorites', favorites);
+      renderExercises(cat);
+    });
+    card.querySelector('[data-mas]').addEventListener('click', e => {
+      e.stopPropagation();
+      mastered = mastered.includes(ex.id) ? mastered.filter(m => m !== ex.id) : [...mastered, ex.id];
+      storeSet('guitar:mastered', mastered);
+      renderExercises(cat);
+    });
+    grid.appendChild(card);
+  });
+}
+
+let currentCat = 'all';
+document.getElementById('catTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-tab');
+  if (!btn) return;
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCat = btn.dataset.cat;
+  renderExercises(currentCat);
+});
+
+/* ===== THEORY DATA ===== */
+const THEORY_TOPICS = [
+  {
+    id:'caged', label:'CAGED',
+    content:`<h1 class="theory-h1">The CAGED System</h1>
+<p class="theory-p">Every chord shape on guitar is derived from one of five open-chord shapes: <strong>C, A, G, E, D</strong>. These five shapes tile the entire fretboard, repeating in that order as you move up. If you know where each root note is, you know every chord shape in every key.</p>
+<h2 class="theory-h2">The Chain</h2>
+<div class="theory-mono">C shape → A shape → G shape → E shape → D shape → (C shape again, 12 frets up)</div>
+<h2 class="theory-h2">Why It Matters</h2>
+<p class="theory-p">Instead of memorizing 60+ chord shapes, you learn 5 and slide them. A Fmaj7 in city pop is often the C-shape barre at the 8th fret. John Mayer's blues licks live in the E and A-shape pentatonic boxes that align with CAGED.</p>
+<h2 class="theory-h2">Practice Tip</h2>
+<p class="theory-p">Pick one chord — say, G major. Play it in all 5 CAGED positions across the neck without looking up. Notice how each position gives a different voicing and timbre. That range is your palette.</p>`
+  },
+  {
+    id:'intervals', label:'Intervals',
+    content:`<h1 class="theory-h1">Intervals</h1>
+<p class="theory-p">An interval is the distance between two notes. Every sound in music — the sweetness of a maj7, the ache of a minor 3rd, the tension of a tritone — comes from specific intervals.</p>
+<h2 class="theory-h2">Key Intervals to Know</h2>
+<ul class="theory-list">
+  <li><strong>Minor 2nd (1 fret)</strong> — sharp dissonance, leading tone</li>
+  <li><strong>Major 2nd (2 frets)</strong> — stepwise motion, smooth</li>
+  <li><strong>Minor 3rd (3 frets)</strong> — sad, dark, bluesy</li>
+  <li><strong>Major 3rd (4 frets)</strong> — bright, happy, resolved</li>
+  <li><strong>Perfect 4th (5 frets)</strong> — open, strong</li>
+  <li><strong>Tritone (6 frets)</strong> — maximum tension, bluesy</li>
+  <li><strong>Perfect 5th (7 frets)</strong> — power, stability</li>
+  <li><strong>Major 6th (9 frets)</strong> — sweet, country, city pop</li>
+  <li><strong>Minor 7th (10 frets)</strong> — bluesy, dominant, R&B</li>
+  <li><strong>Major 7th (11 frets)</strong> — dreamy, floating, jazz/city pop</li>
+</ul>
+<h2 class="theory-h2">Fretboard Shortcut</h2>
+<p class="theory-p">On the same string: each fret = a half step. Across strings (standard tuning): same fret on the next string up = a 4th higher (or 5th lower). The B string breaks the pattern by a half step.</p>`
+  },
+  {
+    id:'scales', label:'Scales & Modes',
+    content:`<h1 class="theory-h1">Major Scale & Modes</h1>
+<p class="theory-p">The major scale (W-W-H-W-W-W-H) is the mother of all Western harmony. Every mode is just starting from a different note of the same scale.</p>
+<h2 class="theory-h2">The 7 Modes</h2>
+<ul class="theory-list">
+  <li><strong>Ionian (I)</strong> — bright, resolved, happy</li>
+  <li><strong>Dorian (II)</strong> — minor but cool, bluesy, Santana</li>
+  <li><strong>Phrygian (III)</strong> — dark, exotic, Spanish</li>
+  <li><strong>Lydian (IV)</strong> — dreamy, floating, #4 shimmer → city pop</li>
+  <li><strong>Mixolydian (V)</strong> — bluesy major, dominant, rock/blues</li>
+  <li><strong>Aeolian (VI)</strong> — natural minor, sad, emotional</li>
+  <li><strong>Locrian (VII)</strong> — unstable, diminished feeling</li>
+</ul>
+<h2 class="theory-h2">City Pop Connection</h2>
+<p class="theory-p">Takanaka's bright shimmer often comes from <strong>Lydian</strong> — that raised 4th (#4) is the note that makes a chord "float." When you land on the #4 over a major chord, it sounds like sunlight off water.</p>
+<h2 class="theory-h2">Blues Connection</h2>
+<p class="theory-p">The blues scale adds a b5 (the "blue note") to the minor pentatonic. Mayer navigates between minor pentatonic and the major pentatonic in the same key — that tension between major and minor color is blues.</p>`
+  },
+  {
+    id:'chords', label:'Chords',
+    content:`<h1 class="theory-h1">Triads & 7th Chords</h1>
+<h2 class="theory-h2">Triads (3 notes)</h2>
+<ul class="theory-list">
+  <li><strong>Major</strong> — R + M3 + P5 — bright, resolved</li>
+  <li><strong>Minor</strong> — R + m3 + P5 — sad, earnest</li>
+  <li><strong>Diminished</strong> — R + m3 + b5 — anxious, transitional</li>
+  <li><strong>Augmented</strong> — R + M3 + #5 — unsettled, dreamy</li>
+</ul>
+<h2 class="theory-h2">7th Chords (4 notes)</h2>
+<ul class="theory-list">
+  <li><strong>Maj7</strong> — R + M3 + P5 + M7 — dreamy, floating, city pop</li>
+  <li><strong>Min7</strong> — R + m3 + P5 + m7 — smooth, cool, melancholy</li>
+  <li><strong>Dom7</strong> — R + M3 + P5 + m7 — bluesy tension, needs resolution</li>
+  <li><strong>Min7b5 (Half-dim)</strong> — transitional, jazz minor</li>
+  <li><strong>Dim7</strong> — maximum tension, cinematic</li>
+</ul>
+<h2 class="theory-h2">Extensions</h2>
+<p class="theory-p">Add 9th, 11th, 13th for color. <strong>add9</strong> (open, hopeful indie shimmer) skips the 7th. <strong>13th chords</strong> are the jazzy sophistication of Takanaka's arrangements.</p>`
+  },
+  {
+    id:'circle', label:'Circle of 5ths',
+    content:`<h1 class="theory-h1">Circle of Fifths</h1>
+<p class="theory-p">Move clockwise by a perfect 5th (7 semitones); counter-clockwise by a perfect 4th. The circle tells you: key signatures, which chords are in a key, and how far apart two keys are.</p>
+<div class="theory-mono">C → G → D → A → E → B → F# → C# → Ab → Eb → Bb → F → C
+(clockwise, each a 5th apart)</div>
+<h2 class="theory-h2">ii–V–I</h2>
+<p class="theory-p">The most important progression in jazz (and city pop). Moving counter-clockwise on the circle: <strong>ii → V → I</strong> (Dm7 → G7 → Cmaj7 in C). That dominant 7th (G7) creates maximum pull toward the I chord. Takanaka uses it constantly.</p>
+<h2 class="theory-h2">Diatonic Chords in a Key</h2>
+<p class="theory-p">In any major key, the chords built on each scale degree follow this pattern:</p>
+<div class="theory-mono">I maj  –  ii min  –  iii min  –  IV maj  –  V dom7  –  vi min  –  vii dim</div>
+<p class="theory-p">Learn this pattern. It works in every key. The Royal Road (city pop progression) is IV–V–iii–vi — all diatonic.</p>`
+  },
+  {
+    id:'secondary', label:'Secondary Dominants',
+    content:`<h1 class="theory-h1">Secondary Dominants</h1>
+<p class="theory-p">A secondary dominant is a dominant 7th chord built on any scale degree (not just V), used to briefly tonicize (make feel like "home") the chord that follows it.</p>
+<h2 class="theory-h2">Formula</h2>
+<p class="theory-p">Take any chord in your key. Build a dominant 7th a 5th above it. That's the secondary dominant of that chord. Write it as V7/x ("five-seven of x").</p>
+<div class="theory-mono">In C major:
+V7/ii  = A7  → Dm7
+V7/iii = B7  → Em7
+V7/IV  = C7  → Fmaj7   ← city pop flavored!
+V7/V   = D7  → G7
+V7/vi  = E7  → Am7</div>
+<h2 class="theory-h2">In Practice</h2>
+<p class="theory-p">Takanaka's arrangements are rich with secondary dominants. Going C7 → Fmaj7 (V7/IV) gives that warm, almost melancholy-sweet lift that city pop is famous for. Listen for it.</p>`
+  },
+  {
+    id:'feel', label:'Scales → Chords',
+    content:`<h1 class="theory-h1">How Scales Map to Chords</h1>
+<p class="theory-p">Every chord implies a scale (or several). Playing "inside" means using the scale the chord implies. Playing "outside" means briefly leaving it for color.</p>
+<h2 class="theory-h2">Chord → Scale Guide</h2>
+<ul class="theory-list">
+  <li><strong>Maj7 chord</strong> → Ionian or Lydian (use #4 for floating shimmer)</li>
+  <li><strong>Dom7 chord</strong> → Mixolydian, or blues scale for grit</li>
+  <li><strong>Min7 chord</strong> → Dorian (has a major 6th = cool) or Aeolian</li>
+  <li><strong>Min7b5</strong> → Locrian</li>
+  <li><strong>Any blues chord</strong> → Minor pentatonic, or mix major/minor pentatonic</li>
+</ul>
+<h2 class="theory-h2">Mayer's Trick</h2>
+<p class="theory-p">Over a I chord in blues, John Mayer often uses the <em>major</em> pentatonic for the happy phrases, then slides to the <em>minor</em> pentatonic (same root) for the ache. The interplay between these two is the sound of modern blues guitar.</p>
+<h2 class="theory-h2">City Pop Trick</h2>
+<p class="theory-p">Over a IVmaj7 chord, try playing a Lydian scale from that root. The #4 will sound otherworldly and bright — that's the note Takanaka leans on for his signature shimmer.</p>`
+  }
+];
+
+function renderTheory(topicId) {
+  const topic = THEORY_TOPICS.find(t => t.id === topicId);
+  if (topic) document.getElementById('theoryContent').innerHTML = topic.content;
+}
+
+function buildTheoryNav() {
+  const nav = document.getElementById('theoryNav');
+  THEORY_TOPICS.forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'theory-nav-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = t.label;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.theory-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTheory(t.id);
+    });
+    nav.appendChild(btn);
+  });
+  renderTheory(THEORY_TOPICS[0].id);
+}
+
+/* ===== FEEL ENGINE ===== */
+let feelCtx = null;
+let activeChordSources = [];
+let activeProgTimeout = null;
+
+function getFeelCtx() {
+  if (!feelCtx) feelCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return feelCtx;
+}
+
+function playNotes(frequencies, duration = 2.5) {
+  stopAllSounds();
+  const ctx = getFeelCtx();
+  frequencies.forEach(freq => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime + duration - 0.4);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+    activeChordSources.push({ osc, gain });
+  });
+}
+
+function stopAllSounds() {
+  activeChordSources.forEach(s => { try { s.osc.stop(); } catch {} });
+  activeChordSources = [];
+  clearTimeout(activeProgTimeout);
+  document.querySelectorAll('.feel-play-btn').forEach(b => {
+    b.textContent = '▶ Play'; b.classList.remove('stop');
+  });
+  document.querySelectorAll('.feel-prog-card,.feel-chord-card').forEach(c => c.classList.remove('playing'));
+}
+
+const NOTE = {
+  C3:130.81, D3:146.83, Ds3:155.56, E3:164.81, F3:174.61, Fs3:185.00,
+  G3:196.00, Gs3:207.65, A3:220.00, As3:233.08, B3:246.94,
+  C4:261.63, Cs4:277.18, D4:293.66, Ds4:311.13, E4:329.63, F4:349.23,
+  Fs4:369.99, G4:392.00, Gs4:415.30, A4:440.00, As4:466.16, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00
+};
+
+const CHORD_VOICINGS = {
+  Cmaj7:  [NOTE.C3, NOTE.G3, NOTE.E4, NOTE.B4],
+  Fmaj7:  [NOTE.F3, NOTE.A3, NOTE.E4, NOTE.C5],
+  G7:     [NOTE.G3, NOTE.B3, NOTE.D4, NOTE.F4],
+  Am7:    [NOTE.A3, NOTE.E4, NOTE.G4, NOTE.C5],
+  Dm7:    [NOTE.D3, NOTE.A3, NOTE.C4, NOTE.F4],
+  Em7:    [NOTE.E3, NOTE.G3, NOTE.D4, NOTE.B4],
+  Gmaj:   [NOTE.G3, NOTE.B3, NOTE.D4, NOTE.G4],
+  Fmaj:   [NOTE.F3, NOTE.A3, NOTE.C4, NOTE.F4],
+  Cmaj:   [NOTE.C3, NOTE.G3, NOTE.C4, NOTE.E4],
+  Amaj:   [NOTE.A3, NOTE.Cs4, NOTE.E4, NOTE.A4],
+  A7:     [NOTE.A3, NOTE.Cs4, NOTE.E4, NOTE.G4],
+  D7:     [NOTE.D3, NOTE.Fs3, NOTE.C4, NOTE.A4],
+  E7:     [NOTE.E3, NOTE.Gs3, NOTE.D4, NOTE.B4],
+  Cadd9:  [NOTE.C3, NOTE.G3, NOTE.D4, NOTE.E4],
+  Csus2:  [NOTE.C3, NOTE.G3, NOTE.D4, NOTE.G4],
+  Cdim7:  [NOTE.C3, NOTE.Ds3, NOTE.Fs3, NOTE.A3],
+  Cmaj13: [NOTE.C3, NOTE.E3, NOTE.G3, NOTE.B3, NOTE.A4],
+};
+
+const PROGRESSIONS = [
+  {
+    id:'p1',
+    name:'I – V – vi – IV',
+    roman:'Cmaj → G → Am → F',
+    desc:'The most-played progression in pop history. Timeless because the vi (minor 6th) brings an ache right as you expect resolution. Hopeful but with a shadow.',
+    where:'Everywhere — from Pachelbel to every pop song you know.',
+    genres:['indie'],
+    chords:['Cmaj','Gmaj','Am7','Fmaj'],
+    delay: 2200
+  },
+  {
+    id:'p2',
+    name:'ii – V – I',
+    roman:'Dm7 → G7 → Cmaj7',
+    desc:'The fundamental jazz motion. The dominant 7th (G7) creates strong gravitational pull toward home (Cmaj7). Adding maj7 gives it city pop elegance instead of jazz stiffness.',
+    where:'Jazz, bossa nova, city pop — any time music wants to feel sophisticated.',
+    genres:['city'],
+    chords:['Dm7','G7','Cmaj7'],
+    delay: 2500
+  },
+  {
+    id:'p3',
+    name:'12-Bar Blues',
+    roman:'A7 → D7 → A7 → E7 → D7 → A7',
+    desc:'The container for a century of American feeling. Its magic is the dominant 7th on every chord — nothing fully resolves, which is why blues can express longing so perfectly.',
+    where:'Delta blues, Chicago blues, Mayer, BB King, Clapton — the root of all roots.',
+    genres:['blues'],
+    chords:['A7','A7','D7','D7','A7','A7','E7','D7','A7','E7'],
+    delay: 1500
+  },
+  {
+    id:'p4',
+    name:'I – vi – IV – V',
+    roman:'C → Am → F → G',
+    desc:'The "50s progression." The drop from I to vi gives it a nostalgic, wistful quality — like looking at old photographs. Innocent but bittersweet.',
+    where:'Doo-wop, early rock and roll, many indie ballads.',
+    genres:['indie','city'],
+    chords:['Cmaj','Am7','Fmaj','Gmaj'],
+    delay: 2200
+  },
+  {
+    id:'p5',
+    name:'Royal Road (City Pop)',
+    roman:'Fmaj7 → G7 → Em7 → Am7',
+    desc:'The IV–V–iii–vi in C major. Called "Royal Road" in Japan. That descending bass line (F→G→E→A) under floating maj7 voicings is the sound of driving at night in Tokyo, 1982. Nostalgic, bittersweet, sophisticated — city pop in four chords.',
+    where:'Takanaka, Tatsuro Yamashita, Mariya Takeuchi, modern city pop everywhere.',
+    genres:['city'],
+    chords:['Fmaj7','G7','Em7','Am7'],
+    delay: 2500
+  }
+];
+
+const CHORD_QUALITIES = [
+  { id:'cq1', name:'maj7', quality:'Major 7th', desc:'Dreamy, floating, sophisticated. The maj7 interval creates gentle, unresolved warmth — like a sunset that never fully darkens. The signature sound of city pop and smooth jazz.', notes:[NOTE.C3,NOTE.G3,NOTE.E4,NOTE.B4] },
+  { id:'cq2', name:'min7', quality:'Minor 7th', desc:'Smooth, cool, melancholy. Softer than a plain minor chord — the minor 7th takes the edge off the sadness and adds a layer of sophistication. Modern R&B, neo-soul, jazz ballads.', notes:[NOTE.A3,NOTE.E4,NOTE.G4,NOTE.C5] },
+  { id:'cq3', name:'dom7', quality:'Dominant 7th', desc:'Tension that wants resolution. The tritone between the 3rd and 7th creates maximum pull toward the I chord. This is the engine of blues harmony — that unresolved ache.', notes:[NOTE.G3,NOTE.B3,NOTE.D4,NOTE.F4] },
+  { id:'cq4', name:'add9', quality:'Add 9', desc:'Open, hopeful, indie shimmer. The 9th (2nd an octave up) adds color without the weight of a full 7th. Cadd9 is the sound of open-chord indie guitar — wide and ringing.', notes:[NOTE.C3,NOTE.G3,NOTE.D4,NOTE.E4] },
+  { id:'cq5', name:'sus2', quality:'Suspended 2nd', desc:'Floating, unresolved, patient. Neither major nor minor — suspended chords feel like a held breath. Open and atmospheric, great for intros and transitions.', notes:[NOTE.C3,NOTE.G3,NOTE.D4,NOTE.G4] },
+  { id:'cq6', name:'dim7', quality:'Diminished 7th', desc:'Anxious, cinematic, transitional. Four notes each a minor 3rd apart — maximum dissonance and symmetry. Used to create tension before a resolution. Dark and unsettled.', notes:[NOTE.C3,NOTE.Ds3,NOTE.Fs3,NOTE.A3] },
+  { id:'cq7', name:'13th', quality:'Dominant 13th', desc:'Jazzy sophistication, lush fullness. Stacking extensions to the 13th (the 6th an octave up) creates the rich orchestral sound of jazz and Takanaka\'s arrangements. Mature and complex.', notes:[NOTE.C3,NOTE.E3,NOTE.G3,NOTE.B3,NOTE.A4] },
+];
+
+function buildFeelEngine() {
+  const progGrid = document.getElementById('feelProgGrid');
+  PROGRESSIONS.forEach(prog => {
+    const card = document.createElement('div');
+    card.className = 'feel-prog-card';
+    card.innerHTML = `
+      <div class="feel-prog-name">${prog.name}</div>
+      <div class="feel-prog-roman">${prog.roman}</div>
+      <div class="feel-prog-desc">${prog.desc}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:10px;">${prog.where}</div>
+      <div class="feel-prog-genres">${prog.genres.map(g =>
+        `<span class="feel-genre-tag ${g}">${g === 'city' ? 'City Pop' : g === 'blues' ? 'Blues' : 'Indie'}</span>`
+      ).join('')}</div>
+      <button class="feel-play-btn" data-prog="${prog.id}">▶ Play</button>
+    `;
+    const btn = card.querySelector('.feel-play-btn');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const isPlaying = card.classList.contains('playing');
+      stopAllSounds();
+      if (isPlaying) return;
+      card.classList.add('playing');
+      btn.textContent = '⏹ Stop'; btn.classList.add('stop');
+      let idx = 0;
+      function playNext() {
+        if (idx >= prog.chords.length) {
+          stopAllSounds();
+          return;
+        }
+        const chord = prog.chords[idx++];
+        const notes = CHORD_VOICINGS[chord];
+        if (notes) playNotes(notes, prog.delay / 1000 * 0.9);
+        activeProgTimeout = setTimeout(playNext, prog.delay);
+      }
+      playNext();
+    });
+    progGrid.appendChild(card);
+  });
+
+  const chordGrid = document.getElementById('feelChordGrid');
+  CHORD_QUALITIES.forEach(cq => {
+    const card = document.createElement('div');
+    card.className = 'feel-chord-card';
+    card.innerHTML = `
+      <div class="feel-chord-name">${cq.name}</div>
+      <div class="feel-chord-quality">${cq.quality}</div>
+      <div class="feel-chord-desc">${cq.desc}</div>
+    `;
+    card.addEventListener('click', () => {
+      const isPlaying = card.classList.contains('playing');
+      stopAllSounds();
+      if (isPlaying) return;
+      card.classList.add('playing');
+      playNotes(cq.notes, 3);
+      setTimeout(() => card.classList.remove('playing'), 3100);
+    });
+    chordGrid.appendChild(card);
+  });
+}
+
+/* ===== TODAY PLAN ===== */
+const PLAN_ITEMS_BY_TYPE = {
+  warmup: ['w1','w2','w3'],
+  technique: ['t1','t2','t3','t4','t5'],
+  citypop: ['c1','c2','c3','c4'],
+  indie: ['i1','i2','i3'],
+  blues: ['b1','b2','b3','b4','b5'],
+  theory: THEORY_TOPICS.map(t => t.id),
+  feel: PROGRESSIONS.map(p => p.id)
+};
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function generatePlan(focus) {
+  const genrePool = focus
+    ? PLAN_ITEMS_BY_TYPE[focus]
+    : [...PLAN_ITEMS_BY_TYPE.citypop, ...PLAN_ITEMS_BY_TYPE.indie, ...PLAN_ITEMS_BY_TYPE.blues];
+  const warmupId = pick(PLAN_ITEMS_BY_TYPE.warmup);
+  const techniqueId = pick(PLAN_ITEMS_BY_TYPE.technique);
+  const genreId = pick(genrePool);
+  const theoryId = pick(PLAN_ITEMS_BY_TYPE.theory);
+  const feelId = pick(PLAN_ITEMS_BY_TYPE.feel);
+
+  const exById = id => EXERCISES.find(e => e.id === id);
+  const theoryById = id => THEORY_TOPICS.find(t => t.id === id);
+  const progById = id => PROGRESSIONS.find(p => p.id === id);
+
+  return [
+    { id: warmupId, type: 'Warmup', title: exById(warmupId)?.title || warmupId, completed: false },
+    { id: techniqueId, type: 'Technique', title: exById(techniqueId)?.title || techniqueId, completed: false },
+    { id: genreId, type: focus ? focus[0].toUpperCase() + focus.slice(1) : 'Genre', title: exById(genreId)?.title || progById(genreId)?.name || genreId, completed: false },
+    { id: theoryId, type: 'Theory', title: theoryById(theoryId)?.label || theoryId, completed: false },
+    { id: feelId, type: 'Feel', title: progById(feelId)?.name || feelId, completed: false }
+  ];
+}
+
+let currentFocus = '';
+
+function loadPlan() {
+  const today = todayStr();
+  let plan = storeGet('guitar:plan:' + today);
+  if (!plan) {
+    plan = { focus: currentFocus, items: generatePlan(currentFocus) };
+    storeSet('guitar:plan:' + today, plan);
+  } else {
+    currentFocus = plan.focus || '';
+    document.querySelectorAll('.focus-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.focus === currentFocus);
+    });
+  }
+  renderPlan(plan.items);
+}
+
+function renderPlan(items) {
+  const list = document.getElementById('planList');
+  list.innerHTML = '';
+  let done = 0;
+  items.forEach((item, i) => {
+    if (item.completed) done++;
+    const li = document.createElement('li');
+    li.className = 'plan-item' + (item.completed ? ' done' : '');
+    li.innerHTML = `
+      <label class="plan-item-cb">
+        <input type="checkbox" ${item.completed ? 'checked' : ''}/>
+        <span class="plan-item-cb-vis"></span>
+      </label>
+      <div class="plan-item-info">
+        <div class="plan-item-type">${item.type}</div>
+        <div class="plan-item-title">${item.title}</div>
+      </div>
+      <button class="plan-item-swap" title="Swap this item">↺</button>
+    `;
+    li.querySelector('input').addEventListener('change', e => {
+      const today = todayStr();
+      let plan = storeGet('guitar:plan:' + today);
+      plan.items[i].completed = e.target.checked;
+      storeSet('guitar:plan:' + today, plan);
+      renderPlan(plan.items);
+      updateHeroPlan(plan.items);
+      if (plan.items.every(x => x.completed)) {
+        const streak = storeGet('guitar:streak') || { count: 0, lastDate: null };
+        const today2 = todayStr();
+        if (streak.lastDate !== today2) {
+          streak.count++;
+          streak.lastDate = today2;
+          storeSet('guitar:streak', streak);
+          updateTimerStats();
+        }
+      }
+    });
+    li.querySelector('.plan-item-swap').addEventListener('click', () => {
+      const today = todayStr();
+      let plan = storeGet('guitar:plan:' + today);
+      const newPlan = generatePlan(currentFocus);
+      plan.items[i] = { ...newPlan[i], id: newPlan[Math.min(i, newPlan.length-1)].id, type: item.type, title: newPlan[i].title, completed: false };
+      storeSet('guitar:plan:' + today, plan);
+      renderPlan(plan.items);
+    });
+    list.appendChild(li);
+  });
+  updateHeroPlan(items);
+}
+
+function updateHeroPlan(items) {
+  const done = items.filter(i => i.completed).length;
+  document.getElementById('heroPlanNum').textContent = `${done}/${items.length}`;
+}
+
+document.querySelectorAll('.focus-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.focus-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFocus = btn.dataset.focus;
+    const today = todayStr();
+    const plan = { focus: currentFocus, items: generatePlan(currentFocus) };
+    storeSet('guitar:plan:' + today, plan);
+    renderPlan(plan.items);
+  });
+});
+
+document.getElementById('planRegenBtn').addEventListener('click', () => {
+  const today = todayStr();
+  const plan = { focus: currentFocus, items: generatePlan(currentFocus) };
+  storeSet('guitar:plan:' + today, plan);
+  renderPlan(plan.items);
+});
+
+document.getElementById('planCompleteBtn').addEventListener('click', () => {
+  const today = todayStr();
+  let plan = storeGet('guitar:plan:' + today);
+  plan.items = plan.items.map(i => ({ ...i, completed: true }));
+  storeSet('guitar:plan:' + today, plan);
+  renderPlan(plan.items);
+});
+
+/* ===== TIPS ===== */
+const TIPS = [
+  'Keep your pick angle at about 30–45° to the string. A flatter angle gives a warmer, rounder attack. Takanaka's clean city pop tone comes partly from a light, angled pick stroke — not a stabbing motion.',
+  'Fretting-hand pressure: use the minimum needed to get a clean note. Excess pressure causes tension that slows you down and fatigues your hand. Press just enough, no more.',
+  'John Mayer's vibrato is wide and vocal — think of a singer bending a note. Start the bend, then oscillate. Most beginners vibrate too fast and too narrow. Slow it down.',
+  'Bending in tune: after you bend, compare the pitch to the target note fretted normally. Your ear will train your hand to hit the pitch consistently over time.',
+  'Muting is half the job. On fast runs, your fretting hand should mute strings behind the note and your picking hand should mute strings above it. Clean guitar is disciplined guitar.',
+  'Dynamics are your greatest expressive tool. Play a phrase at whisper volume, then repeat it louder. The contrast tells a story. Mayer never plays everything at the same volume.',
+  'For smooth city pop chord transitions, let the chord ring as long as possible before you move. The last note of one chord and the first note of the next are often close in pitch — find that connection.',
+  'Volume swells: roll your guitar's volume knob to zero before you pick, then swell it up after. This removes the pick attack entirely and gives you that haunting, almost synth-like city pop tone.',
+  'Economy of motion: your picking hand should move only as far as it needs to. On fast passages, tighter motion = less distance = faster and more accurate. Practice in slow motion first.',
+  'Takanaka's hybrid picking (pick + middle/ring fingers) lets you play bass notes and treble melody simultaneously. Start with a simple bass note + treble note pair and build up.',
+  'The blues scale is minor pentatonic + one "blue note" (b5). That b5 is your tension note — use it as a passing tone, not a resting point. Land on the minor 3rd or root for resolution.',
+  'Chord-melody: play the melody note as the highest note of each chord voicing. Move the chord voicing to serve the melody. Takanaka's solo pieces are masterclasses in this technique.',
+  'For clean string bends, make sure multiple fingers support the bend. If you're bending on the ring finger, let your index and middle fingers also push the string. More force, more control.',
+  'Practice with a metronome at 60% of your target tempo. If you can't play it cleanly slowly, you can't play it cleanly fast — you're just hiding mistakes in the speed.',
+  'City pop vibrato is subtler than blues vibrato. Rather than a wide wobble, think of a gentle shimmer on sustained notes. Roll your finger in tiny oscillations from the wrist, not the elbow.'
+];
+
+let currentTip = 0;
+
+function renderTip() {
+  currentTip = (storeGet('guitar:tips_index') || 0) % TIPS.length;
+  document.getElementById('tipText').textContent = TIPS[currentTip];
+  document.getElementById('tipNum').textContent = `Tip ${currentTip + 1} of ${TIPS.length}`;
+  const dots = document.getElementById('tipDots');
+  dots.innerHTML = '';
+  TIPS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'tip-dot' + (i === currentTip ? ' active' : '');
+    dots.appendChild(d);
+  });
+}
+
+document.getElementById('tipNextBtn').addEventListener('click', () => {
+  currentTip = (currentTip + 1) % TIPS.length;
+  storeSet('guitar:tips_index', currentTip);
+  renderTip();
+});
+document.getElementById('tipPrevBtn').addEventListener('click', () => {
+  currentTip = (currentTip - 1 + TIPS.length) % TIPS.length;
+  storeSet('guitar:tips_index', currentTip);
+  renderTip();
+});
+
+/* ===== AI TUTOR ===== */
+const TUTOR_SYSTEM = `You are an expert guitar tutor with deep knowledge of city pop (especially Masayoshi Takanaka — his use of lydian modes, hybrid picking, clean jazz-influenced chord-melody, bright upper-register voicings), indie/jangle pop (The Runarounds style — open chords, capo work, rhythmic strumming, arpeggiated progressions), and blues guitar (John Mayer's style — minor pentatonic vocabulary, expressive slow bends, vibrato, hybrid picking, the interplay between major and minor pentatonic).
+
+You explain music theory practically and fretboard-first. Reference the CAGED system when discussing chord shapes and scale positions. Suggest concrete licks with tab when helpful. Connect theory directly to sound and emotional feel. Give focused, practical answers. When writing tab, use standard 6-string notation (e/B/G/D/A/E strings).`;
+
+const SUGGESTIONS = [
+  'How do I get Takanaka\'s clean bright tone?',
+  'Explain the Royal Road progression',
+  'What\'s the difference between major and minor pentatonic?',
+  'How do I make my bends sound like Mayer?',
+  'What makes city pop chords sound dreamy?',
+  'Show me a 12-bar blues lick in A'
+];
+
+let tutorHistory = [];
+
+function buildTutorSuggestions() {
+  const container = document.getElementById('tutorSuggestions');
+  SUGGESTIONS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'tutor-suggestion';
+    btn.textContent = s;
+    btn.addEventListener('click', () => {
+      document.getElementById('tutorInput').value = s;
+      sendTutorMessage();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function appendChatMsg(role, content) {
+  const chat = document.getElementById('tutorChat');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  // Render code blocks
+  const parts = content.split(/(```[\s\S]*?```)/g);
+  parts.forEach(part => {
+    if (part.startsWith('```')) {
+      const pre = document.createElement('pre');
+      pre.textContent = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
+      div.appendChild(pre);
+    } else {
+      const span = document.createElement('span');
+      span.textContent = part;
+      div.appendChild(span);
+    }
+  });
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendTutorMessage() {
+  const input = document.getElementById('tutorInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!ANTHROPIC_API_KEY) {
+    document.getElementById('tutorApiNote').textContent = 'Add your Anthropic API key to guitar.html (ANTHROPIC_API_KEY constant) to enable the AI tutor.';
+    return;
+  }
+
+  input.value = '';
+  appendChatMsg('user', text);
+  tutorHistory.push({ role: 'user', content: text });
+
+  const sendBtn = document.getElementById('tutorSendBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = '…';
+
+  // Loading indicator
+  const loading = document.createElement('div');
+  loading.className = 'chat-msg assistant';
+  loading.textContent = '♩ ♩ ♩';
+  loading.id = 'tutorLoading';
+  document.getElementById('tutorChat').appendChild(loading);
+  document.getElementById('tutorChat').scrollTop = 9999;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: TUTOR_SYSTEM,
+        messages: tutorHistory.slice(-10)
+      })
+    });
+    loading.remove();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const reply = data.content[0].text;
+    tutorHistory.push({ role: 'assistant', content: reply });
+    appendChatMsg('assistant', reply);
+  } catch (err) {
+    loading.remove();
+    appendChatMsg('assistant', `Sorry, something went wrong: ${err.message}. Check your API key and network connection.`);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send';
+  }
+}
+
+document.getElementById('tutorSendBtn').addEventListener('click', sendTutorMessage);
+document.getElementById('tutorInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTutorMessage(); }
+});
+
+/* ===== INIT ===== */
+async function init() {
+  await initCache();
+
+  // Timer
+  renderTimer();
+  updateTimerStats();
+
+  // Metronome
+  buildBeatDots();
+  updateBpmSlider();
+
+  // Exercises
+  loadExerciseLists();
+  renderExercises('all');
+
+  // Theory
+  buildTheoryNav();
+
+  // Feel
+  buildFeelEngine();
+
+  // Today
+  loadPlan();
+
+  // Tips
+  renderTip();
+
+  // Tutor
+  buildTutorSuggestions();
+  if (!ANTHROPIC_API_KEY) {
+    document.getElementById('tutorApiNote').textContent = 'Add your Anthropic API key to guitar.html (ANTHROPIC_API_KEY constant) to enable the AI tutor.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sync Settings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== VARIABLES ===== */
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --info: #7BB8F5;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ===== BODY ===== */
+html { background: #050506; }
+
+body {
+  background: transparent;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: max(env(safe-area-inset-top, 0px), 24px) 20px 60px;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Radial washes */
+html::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 65% 50% at 82% 14%, rgba(123,184,245,0.12), transparent),
+    radial-gradient(ellipse 65% 50% at 18% 90%, rgba(180,180,200,0.06), transparent);
+  filter: blur(40px);
+  animation: washDrift 36s alternate infinite ease-in-out;
+  pointer-events: none;
+  z-index: -2;
+}
+
+/* Film grain */
+html::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes washDrift {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.07) translate(-1.5%, 2%); }
+}
+
+/* ===== NAV BAR ===== */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.nav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  transition: background 0.2s, color 0.2s;
+}
+.nav-back:hover { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+
+/* ===== PAGE TITLE ===== */
+.dash-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+
+.dash-subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 24px;
+}
+
+/* ===== SECTION ===== */
+.section { margin-bottom: 24px; }
+
+.section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.section-title::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--text-tertiary);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+}
+
+/* ===== CARD ===== */
+.card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px 22px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== STATUS INDICATORS ===== */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.status-dot.green  { background: var(--success); box-shadow: 0 0 8px rgba(107,227,164,0.6); }
+.status-dot.yellow { background: var(--warning); box-shadow: 0 0 8px rgba(242,192,99,0.6); }
+.status-dot.red    { background: var(--danger);  box-shadow: 0 0 8px rgba(255,107,107,0.6); }
+.status-dot.blue   { background: var(--info);    box-shadow: 0 0 8px rgba(123,184,245,0.6); }
+.status-dot.grey   { background: var(--text-tertiary); }
+
+.status-dot.green  { animation: dotPulse 2s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-info { flex: 1; min-width: 0; }
+.status-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+.status-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== ACTIONS ===== */
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s, filter 0.15s, background 0.2s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+  color: #0A0A0B;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.btn-primary:hover { filter: brightness(1.06); box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.8); }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.10); }
+
+.btn-danger {
+  background: rgba(255,107,107,0.12);
+  color: var(--danger);
+  border: 1px solid rgba(255,107,107,0.20);
+}
+.btn-danger:hover { background: rgba(255,107,107,0.20); }
+
+.btn-success {
+  background: rgba(107,227,164,0.12);
+  color: var(--success);
+  border: 1px solid rgba(107,227,164,0.20);
+}
+.btn-success:hover { background: rgba(107,227,164,0.20); }
+
+/* ===== DATA TABLE ===== */
+.data-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: sticky;
+  top: 0;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.key-cell {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--info);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value-cell {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  max-width: 500px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.value-cell .collapsed {
+  max-height: 60px;
+  overflow: hidden;
+  position: relative;
+}
+.value-cell .collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, rgba(5,5,6,0.9));
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  color: var(--info);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 4px;
+}
+.expand-btn:hover { text-decoration: underline; }
+
+.source-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.source-badge.both    { background: rgba(107,227,164,0.12); color: var(--success); }
+.source-badge.supa    { background: rgba(123,184,245,0.12); color: var(--info); }
+.source-badge.local   { background: rgba(242,192,99,0.12);  color: var(--warning); }
+.source-badge.mismatch{ background: rgba(255,107,107,0.12); color: var(--danger); }
+
+.delete-row-btn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.4;
+  transition: opacity 0.2s, color 0.2s;
+}
+.delete-row-btn:hover { opacity: 1; color: var(--danger); }
+
+/* ===== LOG ===== */
+.sync-log {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 14px 16px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.sync-log:empty::before {
+  content: 'No sync events yet…';
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.log-entry { margin-bottom: 2px; }
+.log-time  { color: var(--text-tertiary); }
+.log-ok    { color: var(--success); }
+.log-warn  { color: var(--warning); }
+.log-err   { color: var(--danger); }
+.log-info  { color: var(--info); }
+
+/* ===== IMPORT/EXPORT ===== */
+.file-drop {
+  border: 2px dashed rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.file-drop:hover, .file-drop.drag-over {
+  border-color: rgba(123,184,245,0.4);
+  background: rgba(123,184,245,0.04);
+}
+.file-drop input { display: none; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(30,30,32,0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+  transform: translateY(120%);
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s;
+  z-index: 100;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ===== MEDIA QUERIES ===== */
+@media (max-width: 480px) {
+  .dash-title { font-size: 22px; }
+  .status-grid { grid-template-columns: 1fr; }
+  .action-row { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <a href="index.html" class="nav-back">← Dashboard</a>
+</nav>
+
+<h1 class="dash-title">Sync Settings</h1>
+<p class="dash-subtitle">Manage Supabase connection, view stored data, and control sync behavior.</p>
+
+<!-- ===== CONNECTION STATUS ===== -->
+<div class="section">
+  <div class="section-title">Connection Status</div>
+  <div class="card">
+    <div class="status-grid">
+      <div class="status-item">
+        <span class="status-dot grey" id="dotSupabase"></span>
+        <div class="status-info">
+          <div class="status-label">Supabase</div>
+          <div class="status-value" id="valSupabase">Checking…</div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-dot grey" id="dotRealtime"></span>
+        <div class="status-info">
+          <div class="status-label">Realtime</div>
+          <div class="status-value" id="valRealtime">Checking…</div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-dot grey" id="dotLocalStorage"></span>
+        <div class="status-info">
+          <div class="status-label">LocalStorage</div>
+          <div class="status-value" id="valLocalStorage">Checking…</div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-dot grey" id="dotLastSync"></span>
+        <div class="status-info">
+          <div class="status-label">Last Sync</div>
+          <div class="status-value" id="valLastSync">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SYNC CONTROLS ===== -->
+<div class="section">
+  <div class="section-title">Sync Controls</div>
+  <div class="card">
+    <div class="action-row">
+      <button class="btn btn-primary" id="btnPullAll" title="Pull all data from Supabase into localStorage">↓ Pull from Supabase</button>
+      <button class="btn btn-primary" id="btnPushAll" title="Push all localStorage data up to Supabase">↑ Push to Supabase</button>
+      <button class="btn btn-secondary" id="btnRefresh" title="Refresh the data table and status indicators">⟳ Refresh View</button>
+      <button class="btn btn-danger" id="btnClearLocal" title="Clear all dashboard keys from localStorage">Clear localStorage</button>
+    </div>
+    <div class="sync-log" id="syncLog"></div>
+  </div>
+</div>
+
+<!-- ===== DATA VIEWER ===== -->
+<div class="section">
+  <div class="section-title">Stored Data</div>
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:4px;">
+      <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-tertiary);" id="dataCount">0 keys</span>
+      <div style="display:flex; gap:6px; font-size:10px;">
+        <span class="source-badge both">Both</span>
+        <span class="source-badge supa">Supabase only</span>
+        <span class="source-badge local">Local only</span>
+        <span class="source-badge mismatch">Mismatch</span>
+      </div>
+    </div>
+    <div class="data-table-wrap" style="max-height:420px; overflow-y:auto;">
+      <table class="data-table" id="dataTable">
+        <thead><tr><th>Key</th><th>Value</th><th>Source</th><th></th></tr></thead>
+        <tbody id="dataBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== IMPORT / EXPORT ===== -->
+<div class="section">
+  <div class="section-title">Import / Export</div>
+  <div class="card">
+    <div class="action-row" style="margin-top:0;">
+      <button class="btn btn-success" id="btnExport">↓ Export JSON</button>
+      <button class="btn btn-success" id="btnExportCSV">↓ Export CSV</button>
+    </div>
+    <div class="file-drop" id="fileDrop">
+      Drop a JSON file here to import, or click to browse
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ===== SUPABASE CONFIG (matches dashboard) ===== */
+const SUPABASE_URL = 'https://ofpkcoiudxjlkmzzwobf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_lt2YTbCy58VugZIYowMcAw_Ji1403d4';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ===== STATE ===== */
+let supabaseData = {};  // key → value from Supabase
+let localData    = {};  // key → value from localStorage
+let realtimeStatus = 'connecting';
+let lastSyncTime   = null;
+
+/* ===== HELPERS ===== */
+function $(id) { return document.getElementById(id); }
+
+function fmtTime(d) {
+  const h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;
+}
+
+function showToast(msg, duration = 3000) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function log(msg, level = 'info') {
+  const el = $('syncLog');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const cls = level === 'ok' ? 'log-ok' : level === 'warn' ? 'log-warn' : level === 'err' ? 'log-err' : 'log-info';
+  entry.innerHTML = `<span class="log-time">[${fmtTime(new Date())}]</span> <span class="${cls}">${msg}</span>`;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ===== LOAD DATA ===== */
+function loadLocalStorage() {
+  localData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k) {
+      try { localData[k] = JSON.parse(localStorage.getItem(k)); }
+      catch { localData[k] = localStorage.getItem(k); }
+    }
+  }
+}
+
+async function loadSupabase() {
+  try {
+    const { data, error } = await db.from('dashboard_kv').select('key, value');
+    if (error) throw error;
+    supabaseData = {};
+    (data || []).forEach(r => { supabaseData[r.key] = r.value; });
+    return true;
+  } catch (e) {
+    log(`Supabase fetch failed: ${e.message}`, 'err');
+    return false;
+  }
+}
+
+/* ===== STATUS INDICATORS ===== */
+function updateStatus(supaOk) {
+  // Supabase
+  const dotS = $('dotSupabase');
+  const valS = $('valSupabase');
+  dotS.className = 'status-dot ' + (supaOk ? 'green' : 'red');
+  valS.textContent = supaOk
+    ? `Connected — ${Object.keys(supabaseData).length} keys`
+    : 'Unreachable';
+
+  // Realtime
+  const dotR = $('dotRealtime');
+  const valR = $('valRealtime');
+  if (realtimeStatus === 'SUBSCRIBED') {
+    dotR.className = 'status-dot green';
+    valR.textContent = 'Subscribed — listening for changes';
+  } else if (realtimeStatus === 'CHANNEL_ERROR') {
+    dotR.className = 'status-dot red';
+    valR.textContent = 'Channel error';
+  } else {
+    dotR.className = 'status-dot yellow';
+    valR.textContent = realtimeStatus || 'Connecting…';
+  }
+
+  // localStorage
+  const dotL = $('dotLocalStorage');
+  const valL = $('valLocalStorage');
+  const lCount = Object.keys(localData).length;
+  dotL.className = 'status-dot green';
+  valL.textContent = `${lCount} keys stored`;
+
+  // Last sync
+  const dotLS = $('dotLastSync');
+  const valLS = $('valLastSync');
+  if (lastSyncTime) {
+    dotLS.className = 'status-dot blue';
+    valLS.textContent = fmtTime(lastSyncTime);
+  } else {
+    dotLS.className = 'status-dot grey';
+    valLS.textContent = '—';
+  }
+}
+
+/* ===== DATA TABLE ===== */
+function renderDataTable() {
+  const body = $('dataBody');
+  body.innerHTML = '';
+
+  const allKeys = new Set([...Object.keys(supabaseData), ...Object.keys(localData)]);
+  const sorted = [...allKeys].sort();
+
+  $('dataCount').textContent = `${sorted.length} keys`;
+
+  sorted.forEach(key => {
+    const inSupa  = key in supabaseData;
+    const inLocal = key in localData;
+    const supaVal = inSupa ? JSON.stringify(supabaseData[key]) : null;
+    const locVal  = inLocal ? JSON.stringify(localData[key]) : null;
+
+    let source, sourceClass;
+    if (inSupa && inLocal) {
+      if (supaVal === locVal) { source = 'Both'; sourceClass = 'both'; }
+      else { source = 'Mismatch'; sourceClass = 'mismatch'; }
+    } else if (inSupa) { source = 'Supabase'; sourceClass = 'supa'; }
+    else { source = 'Local'; sourceClass = 'local'; }
+
+    const displayVal = supaVal || locVal || '—';
+    const isLong = displayVal.length > 120;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="key-cell" title="${key}">${key}</td>
+      <td class="value-cell">
+        <div class="${isLong ? 'collapsed' : ''}" data-full="${encodeURIComponent(displayVal)}">${escapeHtml(displayVal)}</div>
+        ${isLong ? '<button class="expand-btn">show more</button>' : ''}
+      </td>
+      <td><span class="source-badge ${sourceClass}">${source}</span></td>
+      <td><button class="delete-row-btn" title="Delete this key from both stores" data-key="${encodeURIComponent(key)}">×</button></td>
+    `;
+
+    // Expand/collapse
+    const expandBtn = tr.querySelector('.expand-btn');
+    if (expandBtn) {
+      expandBtn.addEventListener('click', () => {
+        const div = tr.querySelector('.value-cell div');
+        const isCollapsed = div.classList.contains('collapsed');
+        div.classList.toggle('collapsed');
+        expandBtn.textContent = isCollapsed ? 'show less' : 'show more';
+      });
+    }
+
+    // Delete
+    tr.querySelector('.delete-row-btn').addEventListener('click', async () => {
+      const k = decodeURIComponent(tr.querySelector('.delete-row-btn').dataset.key);
+      if (!confirm(`Delete key "${k}" from both localStorage and Supabase?`)) return;
+      localStorage.removeItem(k);
+      try {
+        await db.from('dashboard_kv').delete().eq('key', k);
+        log(`Deleted key: ${k}`, 'ok');
+      } catch (e) {
+        log(`Failed to delete from Supabase: ${e.message}`, 'err');
+      }
+      await refreshAll();
+      showToast(`Deleted "${k}"`);
+    });
+
+    body.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ===== SYNC ACTIONS ===== */
+async function pullFromSupabase() {
+  log('Pulling all data from Supabase…', 'info');
+  $('btnPullAll').disabled = true;
+  try {
+    const ok = await loadSupabase();
+    if (!ok) throw new Error('Could not reach Supabase');
+    let count = 0;
+    Object.entries(supabaseData).forEach(([k, v]) => {
+      localStorage.setItem(k, JSON.stringify(v));
+      count++;
+    });
+    lastSyncTime = new Date();
+    log(`Pulled ${count} keys into localStorage`, 'ok');
+    showToast(`Pulled ${count} keys from Supabase`);
+    await refreshAll();
+  } catch (e) {
+    log(`Pull failed: ${e.message}`, 'err');
+    showToast('Pull failed — see log');
+  } finally {
+    $('btnPullAll').disabled = false;
+  }
+}
+
+async function pushToSupabase() {
+  log('Pushing localStorage to Supabase…', 'info');
+  $('btnPushAll').disabled = true;
+  try {
+    loadLocalStorage();
+    const rows = Object.entries(localData).map(([key, value]) => ({ key, value }));
+    if (rows.length === 0) { log('Nothing to push', 'warn'); return; }
+    const { error } = await db.from('dashboard_kv').upsert(rows, { onConflict: 'key' });
+    if (error) throw error;
+    lastSyncTime = new Date();
+    log(`Pushed ${rows.length} keys to Supabase`, 'ok');
+    showToast(`Pushed ${rows.length} keys to Supabase`);
+    await refreshAll();
+  } catch (e) {
+    log(`Push failed: ${e.message}`, 'err');
+    showToast('Push failed — see log');
+  } finally {
+    $('btnPushAll').disabled = false;
+  }
+}
+
+function clearLocalStorage() {
+  if (!confirm('Clear ALL localStorage keys? This only affects this browser — Supabase data is untouched.')) return;
+  const count = localStorage.length;
+  localStorage.clear();
+  log(`Cleared ${count} keys from localStorage`, 'warn');
+  showToast(`Cleared ${count} keys`);
+  refreshAll();
+}
+
+/* ===== IMPORT / EXPORT ===== */
+function exportJSON() {
+  loadLocalStorage();
+  const merged = { ...supabaseData, ...localData };
+  const blob = new Blob([JSON.stringify(merged, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Exported JSON backup', 'ok');
+  showToast('JSON exported');
+}
+
+function exportCSV() {
+  loadLocalStorage();
+  const merged = { ...supabaseData, ...localData };
+  const rows = [['key', 'value']];
+  Object.entries(merged).forEach(([k, v]) => {
+    rows.push([`"${k.replace(/"/g, '""')}"`, `"${JSON.stringify(v).replace(/"/g, '""')}"`]);
+  });
+  const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dashboard-backup-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Exported CSV backup', 'ok');
+  showToast('CSV exported');
+}
+
+async function importJSON(file) {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Expected a JSON object');
+
+    const count = Object.keys(data).length;
+    if (!confirm(`Import ${count} keys? This will overwrite matching keys in both localStorage and Supabase.`)) return;
+
+    // Write to localStorage
+    Object.entries(data).forEach(([k, v]) => {
+      localStorage.setItem(k, JSON.stringify(v));
+    });
+
+    // Push to Supabase
+    const rows = Object.entries(data).map(([key, value]) => ({ key, value }));
+    if (rows.length > 0) {
+      const { error } = await db.from('dashboard_kv').upsert(rows, { onConflict: 'key' });
+      if (error) log(`Supabase import partial fail: ${error.message}`, 'warn');
+    }
+
+    lastSyncTime = new Date();
+    log(`Imported ${count} keys from ${file.name}`, 'ok');
+    showToast(`Imported ${count} keys`);
+    await refreshAll();
+  } catch (e) {
+    log(`Import failed: ${e.message}`, 'err');
+    showToast('Import failed — see log');
+  }
+}
+
+/* ===== REALTIME ===== */
+const channel = db.channel('sync_admin_watch')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'dashboard_kv' }, payload => {
+    const action = payload.eventType;
+    const key = (payload.new && payload.new.key) || (payload.old && payload.old.key) || '?';
+    log(`Realtime: ${action} → ${key}`, 'info');
+
+    if (action === 'DELETE') {
+      delete supabaseData[key];
+    } else if (payload.new) {
+      supabaseData[payload.new.key] = payload.new.value;
+    }
+    loadLocalStorage();
+    updateStatus(true);
+    renderDataTable();
+  })
+  .subscribe((status) => {
+    realtimeStatus = status;
+    updateStatus(Object.keys(supabaseData).length > 0 || realtimeStatus === 'SUBSCRIBED');
+  });
+
+/* ===== REFRESH ===== */
+async function refreshAll() {
+  loadLocalStorage();
+  const ok = await loadSupabase();
+  updateStatus(ok);
+  renderDataTable();
+}
+
+/* ===== WIRE UP ===== */
+$('btnPullAll').addEventListener('click', pullFromSupabase);
+$('btnPushAll').addEventListener('click', pushToSupabase);
+$('btnRefresh').addEventListener('click', () => { refreshAll(); showToast('Refreshed'); });
+$('btnClearLocal').addEventListener('click', clearLocalStorage);
+$('btnExport').addEventListener('click', exportJSON);
+$('btnExportCSV').addEventListener('click', exportCSV);
+
+// File drop
+const drop = $('fileDrop');
+const fileInput = $('fileInput');
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) importJSON(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) importJSON(fileInput.files[0]);
+});
+
+/* ===== INIT ===== */
+async function init() {
+  log('Sync admin page loaded', 'info');
+  await refreshAll();
+  lastSyncTime = new Date();
+  updateStatus(Object.keys(supabaseData).length > 0);
+  log(`Found ${Object.keys(supabaseData).length} Supabase keys, ${Object.keys(localData).length} localStorage keys`, 'ok');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
